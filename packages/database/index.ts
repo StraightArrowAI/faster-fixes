@@ -1,15 +1,13 @@
 import { PrismaPg } from "@prisma/adapter-pg";
-import { PrismaNeon } from "@prisma/adapter-neon";
 import "dotenv/config";
 import { PrismaClient } from "./generated/prisma/client";
 
 const connectionString = `${process.env.DATABASE_URL}`;
 
-// Neon's serverless driver uses HTTP, avoiding TCP cold-start overhead in production.
-// Fall back to the standard pg adapter for local development.
-const adapter = process.env.NODE_ENV === "production"
-  ? new PrismaNeon({ connectionString })
-  : new PrismaPg({ connectionString });
+// Self-hosted on Supabase: the standard node-postgres adapter over Supavisor.
+// Upstream branches to PrismaNeon when NODE_ENV=production, which speaks Neon's
+// WebSocket protocol and cannot talk to any other Postgres host.
+const adapter = new PrismaPg({ connectionString });
 
 const prisma = new PrismaClient({ adapter });
 
