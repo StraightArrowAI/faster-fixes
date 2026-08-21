@@ -2,6 +2,7 @@ import { checkRateLimit } from "@/server/api/check-rate-limit";
 import { resolveProject } from "@/server/api/resolve-project";
 import { validateOrigin } from "@/server/api/validate-origin";
 import { validateReviewer } from "@/server/api/validate-reviewer";
+import { deleteAsset } from "@/server/storage/delete-asset";
 import { prisma } from "@workspace/db";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -107,6 +108,16 @@ export async function DELETE(req: NextRequest, { params }: RouteParams) {
 
   if (!feedback) {
     return NextResponse.json({ error: "Feedback not found" }, { status: 404 });
+  }
+
+  // Remove the screenshot before the report. `Feedback.screenshot` is
+  // `onDelete: SetNull`, which does not help here — it is the Feedback being
+  // deleted, not the Asset — so without this the Asset row and its stored
+  // object survive, referenced by nothing and reachable through no report.
+  // `deleteAsset` is best-effort about the stored object (it logs and still
+  // removes the row), so a storage hiccup cannot leave the report undeletable.
+  if (feedback.screenshotId) {
+    await deleteAsset(feedback.screenshotId);
   }
 
   await prisma.feedback.delete({ where: { id } });

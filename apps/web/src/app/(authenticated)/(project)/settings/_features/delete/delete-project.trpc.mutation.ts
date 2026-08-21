@@ -1,5 +1,6 @@
 "use server";
 
+import { deleteFeedbackScreenshots } from "@/server/storage/delete-feedback-screenshots";
 import { protectedProcedure } from "@/server/trpc/trpc";
 import { TRPCError, inferProcedureOutput } from "@trpc/server";
 import z from "zod";
@@ -28,6 +29,10 @@ export const deleteProject = protectedProcedure
     if (!membership) {
       throw new TRPCError({ code: "FORBIDDEN", message: "Access denied." });
     }
+
+    // `Project -> Feedback` is `onDelete: Cascade`, so deleting the project
+    // takes every report with it and would orphan every screenshot it had.
+    await deleteFeedbackScreenshots({ projectId: input.projectId });
 
     await prisma.project.delete({ where: { id: input.projectId } });
 
