@@ -63,6 +63,9 @@ export const getArchivedFeedback = protectedProcedure
           screenshot: {
             select: { id: true, key: true, provider: true, bucket: true },
           },
+          recording: {
+            select: { id: true, key: true, provider: true, bucket: true },
+          },
         },
       }),
       prisma.feedback.count({ where }),
@@ -86,6 +89,7 @@ export const getArchivedFeedback = protectedProcedure
         screenshotUrl: f.screenshot
           ? await getSignedAssetUrl(f.screenshot)
           : null,
+        recordingUrl: f.recording ? await getSignedAssetUrl(f.recording) : null,
       })),
     );
 

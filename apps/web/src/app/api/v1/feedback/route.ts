@@ -3,6 +3,10 @@ import { resolveProject } from "@/server/api/resolve-project";
 import { validateOrigin } from "@/server/api/validate-origin";
 import { validateReviewer } from "@/server/api/validate-reviewer";
 import { checkResourceLimit } from "@/server/auth/subscription";
+import {
+  ALLOWED_SCREENSHOT_TYPES,
+  effectiveMaxScreenshotBytes,
+} from "@/server/feedback/screenshot-limits";
 import { inngest } from "@/server/inngest";
 import { s3Client } from "@/server/storage";
 import { createAsset } from "@/server/storage/create-asset";
@@ -47,8 +51,6 @@ const CreateFeedbackSchema = z.object({
   metadata: z.record(z.string(), z.any()).optional(),
   diagnosticTrail: DiagnosticTrailSchema.optional(),
 });
-
-const ALLOWED_SCREENSHOT_TYPES = ["image/png", "image/jpeg", "image/webp"];
 
 // POST /api/v1/feedback — submit new feedback (multipart)
 export async function POST(req: NextRequest) {
@@ -165,12 +167,22 @@ export async function POST(req: NextRequest) {
       screenshotField.size,
     );
     try {
+      // Deployment-dependent: on Vercel the platform refuses the request at
+      // 4.5 MB before this handler runs, so anything above that is dead space.
+      const maxBytes = effectiveMaxScreenshotBytes();
       const buffer = Buffer.from(await screenshotField.arrayBuffer());
       console.info("[feedback] screenshot buffer length:", buffer.length);
-      if (buffer.length > 5 * 1024 * 1024) {
-        console.warn("[feedback] screenshot exceeds 5MB limit:", buffer.length);
+      if (buffer.length > maxBytes) {
+        console.warn(
+          "[feedback] screenshot exceeds limit:",
+          buffer.length,
+          "max:",
+          maxBytes,
+        );
         return NextResponse.json(
-          { error: "Screenshot exceeds 5MB limit" },
+          {
+            error: `Screenshot exceeds ${Math.floor(maxBytes / (1024 * 1024))}MB limit`,
+          },
           { status: 413 },
         );
       }
@@ -237,6 +249,11 @@ export async function POST(req: NextRequest) {
   const screenshotUrl = feedback.screenshot
     ? await getSignedAssetUrl(feedback.screenshot)
     : null;
+  // Always null here: a recording is attached afterwards via
+  // PUT /api/v1/feedback/:id/recording, never inline on submit — a report must
+  // still land if the largest artifact it carries fails to upload. Reported
+  // anyway so the create response has the same shape as the list response.
+  const recordingUrl: string | null = null;
 
   return NextResponse.json(
     {
@@ -248,6 +265,7 @@ export async function POST(req: NextRequest) {
       clickY: feedback.clickY,
       selector: feedback.selector,
       screenshotUrl,
+      recordingUrl,
       metadata: feedback.metadata,
       reviewer: feedback.reviewer,
       createdAt: feedback.createdAt,
@@ -295,6 +313,7 @@ export async function GET(req: NextRequest) {
     include: {
       reviewer: { select: { id: true, name: true } },
       screenshot: { select: { key: true, provider: true, bucket: true } },
+      recording: { select: { key: true, provider: true, bucket: true } },
     },
   });
 
@@ -310,6 +329,7 @@ export async function GET(req: NextRequest) {
       screenshotUrl: f.screenshot
         ? await getSignedAssetUrl(f.screenshot)
         : null,
+      recordingUrl: f.recording ? await getSignedAssetUrl(f.recording) : null,
       metadata: f.metadata,
       reviewer: f.reviewer,
       createdAt: f.createdAt,

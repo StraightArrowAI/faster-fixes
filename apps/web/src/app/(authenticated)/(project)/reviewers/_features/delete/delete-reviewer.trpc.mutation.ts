@@ -1,6 +1,6 @@
 "use server";
 
-import { deleteFeedbackScreenshots } from "@/server/storage/delete-feedback-screenshots";
+import { deleteFeedbackMedia } from "@/server/storage/delete-feedback-media";
 import { protectedProcedure } from "@/server/trpc/trpc";
 import { TRPCError, inferProcedureOutput } from "@trpc/server";
 import z from "zod";
@@ -32,8 +32,8 @@ export const deleteReviewer = protectedProcedure
     }
 
     // `Reviewer -> Feedback` is `onDelete: Cascade`, so deleting the reviewer
-    // takes their reports with them and would orphan every screenshot they had.
-    await deleteFeedbackScreenshots({ reviewerId: input.reviewerId });
+    // takes their reports with them and would orphan all of their media.
+    await deleteFeedbackMedia({ reviewerId: input.reviewerId });
 
     await prisma.reviewer.delete({
       where: { id: input.reviewerId },

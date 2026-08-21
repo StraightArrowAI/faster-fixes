@@ -2,7 +2,7 @@ import { ORGANIZATION_ROLES } from "@/app/_features/organization/_utils/organiza
 import { mailer } from "@/lib/mailer/client";
 import { SENDER_EMAIL } from "@/lib/mailer/constants";
 import { OrganizationInvitation } from "@/lib/mailer/templates/organization-invitation";
-import { deleteFeedbackScreenshots } from "@/server/storage/delete-feedback-screenshots";
+import { deleteFeedbackMedia } from "@/server/storage/delete-feedback-media";
 import { getAppUrl } from "@/utils/url/get-app-url";
 import { render } from "@react-email/components";
 import { organization } from "better-auth/plugins";
@@ -22,11 +22,11 @@ export const organizationPlugin = organization({
   organizationHooks: {
     // `Organization -> Project -> Feedback` is `onDelete: Cascade` the whole
     // way down, so deleting an organization silently takes every report in it
-    // and would orphan every screenshot those reports had: Asset rows and
-    // stored objects referenced by nothing, reachable through no report.
+    // and would orphan all of their media: Asset rows and stored objects
+    // referenced by nothing, reachable through no report.
     // Better Auth owns the delete itself, so this is the only seam available.
     beforeDeleteOrganization: async ({ organization: org }) => {
-      await deleteFeedbackScreenshots({
+      await deleteFeedbackMedia({
         project: { organizationId: org.id },
       });
     },

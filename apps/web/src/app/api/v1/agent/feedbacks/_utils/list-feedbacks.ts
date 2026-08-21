@@ -1,4 +1,5 @@
 import { formatFeedbackListAsMarkdown } from "@/app/_features/feedback/format-feedback-markdown";
+import { readRecordingDurationMs } from "@/server/feedback/recording-metadata";
 import { getSignedAssetUrl } from "@/server/storage/get-signed-asset-url";
 import type { DiagnosticTrail } from "@fasterfixes/core";
 import { prisma } from "@workspace/db";
@@ -49,6 +50,9 @@ export async function listFeedbacks(req: NextRequest) {
     include: {
       reviewer: { select: { name: true } },
       screenshot: { select: { key: true, provider: true, bucket: true } },
+      recording: {
+        select: { key: true, provider: true, bucket: true, metadata: true },
+      },
     },
   });
 
@@ -73,6 +77,8 @@ export async function listFeedbacks(req: NextRequest) {
       screenshotUrl: f.screenshot
         ? await getSignedAssetUrl(f.screenshot)
         : null,
+      recordingUrl: f.recording ? await getSignedAssetUrl(f.recording) : null,
+      recordingDurationMs: readRecordingDurationMs(f.recording?.metadata),
       metadata: f.metadata as Record<string, unknown> | null,
       diagnosticTrail: f.diagnosticTrail as DiagnosticTrail | null,
       reviewerName: f.reviewer.name,

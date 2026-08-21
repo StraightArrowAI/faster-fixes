@@ -1,6 +1,6 @@
 "use server";
 
-import { deleteAsset } from "@/server/storage/delete-asset";
+import { deleteFeedbackMedia } from "@/server/storage/delete-feedback-media";
 import { protectedProcedure } from "@/server/trpc/trpc";
 import { TRPCError } from "@trpc/server";
 import { HardDeleteFeedbackSchema } from "./hard-delete-feedback.schema";
@@ -37,9 +37,7 @@ export const hardDeleteFeedback = protectedProcedure
       throw new TRPCError({ code: "FORBIDDEN", message: "Access denied." });
     }
 
-    if (feedback.screenshotId) {
-      await deleteAsset(feedback.screenshotId);
-    }
+    await deleteFeedbackMedia({ id: input.feedbackId });
 
     await prisma.feedback.delete({
       where: { id: input.feedbackId },

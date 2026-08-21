@@ -11,6 +11,11 @@ type RateLimitConfig = {
 const RATE_LIMITS = {
   submit: { max: 100, windowMs: 3_600_000 } satisfies RateLimitConfig,
   read: { max: 1000, windowMs: 3_600_000 } satisfies RateLimitConfig,
+  // Screen recordings get their own, much smaller budget: each one is up to
+  // 20 MB against a screenshot's 5 MB, so charging them to `submit` would put
+  // the worst-case hourly ingest for one project at ~2 GB. 20/h caps it at
+  // ~400 MB while leaving normal reporting (a handful of clips an hour) alone.
+  recording: { max: 20, windowMs: 3_600_000 } satisfies RateLimitConfig,
   // Agent ceilings are plan-tiered (see AGENT_API_RATE_LIMITS); the `max` here
   // is only a fallback and is overridden per request via `overrideMax`.
   "agent:read": { max: 1000, windowMs: 3_600_000 } satisfies RateLimitConfig,

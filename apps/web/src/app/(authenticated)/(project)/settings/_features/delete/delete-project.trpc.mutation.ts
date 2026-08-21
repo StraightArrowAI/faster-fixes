@@ -1,6 +1,6 @@
 "use server";
 
-import { deleteFeedbackScreenshots } from "@/server/storage/delete-feedback-screenshots";
+import { deleteFeedbackMedia } from "@/server/storage/delete-feedback-media";
 import { protectedProcedure } from "@/server/trpc/trpc";
 import { TRPCError, inferProcedureOutput } from "@trpc/server";
 import z from "zod";
@@ -31,8 +31,8 @@ export const deleteProject = protectedProcedure
     }
 
     // `Project -> Feedback` is `onDelete: Cascade`, so deleting the project
-    // takes every report with it and would orphan every screenshot it had.
-    await deleteFeedbackScreenshots({ projectId: input.projectId });
+    // takes every report with it and would orphan all of their media.
+    await deleteFeedbackMedia({ projectId: input.projectId });
 
     await prisma.project.delete({ where: { id: input.projectId } });
 

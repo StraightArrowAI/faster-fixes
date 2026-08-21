@@ -1,5 +1,6 @@
 "use server";
 
+import { readRecordingDurationMs } from "@/server/feedback/recording-metadata";
 import { getSignedAssetUrl } from "@/server/storage/get-signed-asset-url";
 import { protectedProcedure } from "@/server/trpc/trpc";
 import { inferProcedureOutput, TRPCError } from "@trpc/server";
@@ -42,6 +43,15 @@ export const getFeedback = protectedProcedure
         },
         screenshot: {
           select: { id: true, key: true, provider: true, bucket: true },
+        },
+        recording: {
+          select: {
+            id: true,
+            key: true,
+            provider: true,
+            bucket: true,
+            metadata: true,
+          },
         },
         issueLink: {
           select: {
@@ -96,6 +106,11 @@ export const getFeedback = protectedProcedure
         screenshotUrl: f.screenshot
           ? await getSignedAssetUrl(f.screenshot)
           : null,
+        // Null for every report submitted before screen recording existed, and
+        // for any report whose reviewer chose not to record. Consumers must
+        // render the no-recording branch, not assume a URL.
+        recordingUrl: f.recording ? await getSignedAssetUrl(f.recording) : null,
+        recordingDurationMs: readRecordingDurationMs(f.recording?.metadata),
         metadata: f.metadata as Record<string, unknown> | null,
         issueLink: f.issueLink,
         linearIssueLink: f.linearIssueLink,

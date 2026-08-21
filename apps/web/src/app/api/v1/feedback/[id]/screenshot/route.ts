@@ -2,6 +2,10 @@ import { checkRateLimit } from "@/server/api/check-rate-limit";
 import { resolveProject } from "@/server/api/resolve-project";
 import { validateOrigin } from "@/server/api/validate-origin";
 import { validateReviewer } from "@/server/api/validate-reviewer";
+import {
+  ALLOWED_SCREENSHOT_TYPES,
+  effectiveMaxScreenshotBytes,
+} from "@/server/feedback/screenshot-limits";
 import { s3Client } from "@/server/storage";
 import { createAsset } from "@/server/storage/create-asset";
 import { getSignedAssetUrl } from "@/server/storage/get-signed-asset-url";
@@ -11,8 +15,6 @@ import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 
 type RouteParams = { params: Promise<{ id: string }> };
-
-const ALLOWED_SCREENSHOT_TYPES = ["image/png", "image/jpeg", "image/webp"];
 
 // PUT /api/v1/feedback/:id/screenshot — attach screenshot after creation
 export async function PUT(req: NextRequest, { params }: RouteParams) {
@@ -81,10 +83,15 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
     );
   }
 
+  // The cap is deployment-dependent: on Vercel the platform refuses the request
+  // at 4.5 MB before this handler runs, so anything above that is dead space.
+  const maxBytes = effectiveMaxScreenshotBytes();
   const buffer = Buffer.from(await screenshotField.arrayBuffer());
-  if (buffer.length > 5 * 1024 * 1024) {
+  if (buffer.length > maxBytes) {
     return NextResponse.json(
-      { error: "Screenshot exceeds 5MB limit" },
+      {
+        error: `Screenshot exceeds ${Math.floor(maxBytes / (1024 * 1024))}MB limit`,
+      },
       { status: 413 },
     );
   }

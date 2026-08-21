@@ -73,6 +73,10 @@ The per-Feedback record connecting a single Feedback to its mirrored issue in a 
 
 ### Diagnostics
 
+**Screen recording**:
+A short screen capture of the sequence that produced a Feedback, attached to that Feedback alongside — never instead of — its **Screenshot**. Stored as a private Asset and served only through a short-lived presigned URL. Optional: most Feedback has none.
+_Avoid_: Video, Session recording (nothing is captured continuously — a Reviewer starts and stops one deliberately), Screencast.
+
 **Diagnostic Trail**:
 The console and network history captured leading up to a Feedback submission, attached to that Feedback to aid reproduction.
 _Avoid_: Session, Logs, Recording (the Trail is a bounded snapshot, not a continuous session recording).

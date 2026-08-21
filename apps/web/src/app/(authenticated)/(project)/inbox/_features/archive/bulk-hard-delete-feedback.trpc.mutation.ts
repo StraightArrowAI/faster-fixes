@@ -1,6 +1,6 @@
 "use server";
 
-import { deleteAsset } from "@/server/storage/delete-asset";
+import { deleteFeedbackMedia } from "@/server/storage/delete-feedback-media";
 import { protectedProcedure } from "@/server/trpc/trpc";
 import { TRPCError } from "@trpc/server";
 import z from "zod";
@@ -40,11 +40,7 @@ export const bulkHardDeleteFeedback = protectedProcedure
       throw new TRPCError({ code: "FORBIDDEN", message: "Access denied." });
     }
 
-    const screenshotIds = feedbackItems
-      .map((f) => f.screenshotId)
-      .filter((id): id is string => id !== null);
-
-    await Promise.all(screenshotIds.map((id) => deleteAsset(id)));
+    await deleteFeedbackMedia({ id: { in: input.feedbackIds } });
 
     await prisma.feedback.deleteMany({
       where: { id: { in: input.feedbackIds } },

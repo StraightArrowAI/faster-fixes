@@ -9,10 +9,11 @@ import {
   SheetTitle,
 } from "@workspace/ui/components/sheet";
 import { format, formatDistanceToNow } from "date-fns";
-import { ExternalLink, ImageOff } from "lucide-react";
+import { ExternalLink, ImageOff, VideoOff } from "lucide-react";
 import type { GetFeedbackOutput } from "../get-feedback.trpc.query";
 import { AssigneeSelect } from "./assignee-select.client";
 import { CopyFeedbackMarkdown } from "./copy-feedback-markdown.client";
+import { RecordingPlayer } from "./recording-player.client";
 import { ScreenshotDialog } from "./screenshot-dialog.client";
 import { StatusSelect } from "./status-select.client";
 import { TrackersSection } from "./trackers-section.client";
@@ -118,6 +119,27 @@ export function FeedbackDetailPanel({
               <div className="text-muted-foreground flex flex-col items-center gap-2 rounded-md border border-dashed py-8">
                 <ImageOff className="size-8 opacity-50" />
                 <span className="text-xs">No screenshot captured</span>
+              </div>
+            )}
+          </div>
+
+          {/* Screen recording. Every report predating this feature, and every
+              report whose reviewer chose not to record, renders the empty
+              branch — the section is always present so its absence reads as
+              "nothing was recorded" rather than "something failed to load". */}
+          <div>
+            <h4 className="text-muted-foreground mb-2 text-xs font-medium uppercase">
+              Screen recording
+            </h4>
+            {feedback.recordingUrl ? (
+              <RecordingPlayer
+                src={feedback.recordingUrl}
+                durationMs={feedback.recordingDurationMs}
+              />
+            ) : (
+              <div className="text-muted-foreground flex flex-col items-center gap-2 rounded-md border border-dashed py-8">
+                <VideoOff className="size-8 opacity-50" />
+                <span className="text-xs">No recording captured</span>
               </div>
             )}
           </div>

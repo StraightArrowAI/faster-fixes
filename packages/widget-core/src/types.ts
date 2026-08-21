@@ -8,9 +8,47 @@ export type WidgetPosition =
 
 export type FeedbackStatus = "new" | "in_progress" | "resolved" | "closed";
 
+export type ScreenshotLimits = {
+  /** Hard byte ceiling the server will accept. Deployment-dependent — always
+   *  read it from the config endpoint, never hard-code a number. */
+  maxBytes: number;
+  /** Accepted MIME types, e.g. ["image/png", "image/jpeg", "image/webp"]. */
+  allowedTypes: string[];
+};
+
+export type RecordingEncodingHint = {
+  /** Pass to `new MediaRecorder(stream, { videoBitsPerSecond })`. */
+  videoBitsPerSecond: number;
+  /** Request via `getDisplayMedia({ video: { frameRate } })`. For mostly-static
+   *  screen content this reduces size far more than bitrate alone. */
+  frameRate: number;
+};
+
+export type RecordingLimits = {
+  /** Hard byte ceiling the server will accept. Deployment-dependent — always
+   *  read it from the config endpoint, never hard-code a number. */
+  maxBytes: number;
+  /** Stop recording at this length. The primary size control. */
+  maxDurationMs: number;
+  /** Base MIME types accepted, e.g. ["video/webm", "video/mp4"]. Compare the
+   *  part before ";" — MediaRecorder appends codec parameters. */
+  allowedTypes: string[];
+  /** Full type strings to try with `MediaRecorder.isTypeSupported()` in order,
+   *  best compression first. Use the first supported entry; never hardcode one.
+   *  Every entry's base type is in `allowedTypes`. */
+  preferredTypes: string[];
+  recommendedEncoding: RecordingEncodingHint;
+};
+
 export type WidgetConfig = {
   enabled: boolean;
   branding: boolean;
+  /** Absent on older servers — fall back to the widget's previous behaviour of
+   *  uploading whatever it captured and handling a 413. */
+  screenshot?: ScreenshotLimits;
+  /** Absent on backends that do not support screen recording (the marketing
+   *  demo client, older servers) — treat that as "recording unavailable". */
+  recording?: RecordingLimits;
 };
 
 export type FeedbackReviewer = {
@@ -27,6 +65,10 @@ export type FeedbackItem = {
   clickY: number | null;
   selector: string | null;
   screenshotUrl: string | null;
+  /** Presigned URL for the Feedback's screen recording, when one was attached.
+   *  Optional so alternative FeedbackClient implementations (the marketing demo,
+   *  test doubles) need not model recordings at all. */
+  recordingUrl?: string | null;
   reviewer: FeedbackReviewer;
   createdAt: string;
   metadata?: Record<string, unknown> | null;

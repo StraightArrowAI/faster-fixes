@@ -20,6 +20,9 @@ export type FeedbackJson = {
   browserVersion: string | null;
   os: string | null;
   screenshotUrl: string | null;
+  recordingUrl: string | null;
+  /** Wall-clock length the widget reported at upload; null when unknown. */
+  recordingDurationMs: number | null;
   reviewerName: string;
   createdAt: string;
 };

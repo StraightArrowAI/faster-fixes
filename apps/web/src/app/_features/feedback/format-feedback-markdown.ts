@@ -19,6 +19,10 @@ export type FeedbackForMarkdown = {
   browserVersion: string | null;
   os: string | null;
   screenshotUrl: string | null;
+  // Optional: the widget-facing list doesn't carry a recording. Absent or null
+  // → the Screen recording section is skipped entirely.
+  recordingUrl?: string | null;
+  recordingDurationMs?: number | null;
   metadata: Record<string, unknown> | null;
   // Optional: the dashboard's lean list query doesn't load it; the agent API and
   // issue creators do. Absent → the Diagnostics section is skipped.
@@ -108,6 +112,22 @@ export function formatFeedbackAsMarkdown(f: FeedbackForMarkdown): string {
       "Examine this screenshot for visual context of the reported feedback:",
     );
     lines.push(`![Feedback screenshot](${f.screenshotUrl})`);
+  }
+
+  // Screen recording — a link, not an embed: markdown has no video element, and
+  // the URL is a short-lived presigned one, so it is labelled as expiring.
+  if (f.recordingUrl) {
+    lines.push("");
+    lines.push("## Screen recording");
+    lines.push("");
+    const length =
+      typeof f.recordingDurationMs === "number"
+        ? ` (${Math.round(f.recordingDurationMs / 1000)}s)`
+        : "";
+    lines.push(
+      `A screen recording of the sequence that produced this feedback is available${length}. The link is presigned and expires:`,
+    );
+    lines.push(`[Watch the recording](${f.recordingUrl})`);
   }
 
   return lines.join("\n");

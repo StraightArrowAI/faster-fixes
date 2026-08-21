@@ -90,6 +90,14 @@ model Feedback {
   screenshotId String?
   screenshot   Asset?  @relation("FeedbackScreenshot", fields: [screenshotId], references: [id], onDelete: SetNull)
 
+  // Screen recording: an optional short capture of the sequence that produced
+  // the defect. Additive to `screenshot`, never a replacement — a report may
+  // carry both, either, or neither. Kept as its own Asset FK rather than
+  // overloading `screenshotId` so the two media have independent lifecycles,
+  // caps, and MIME allow-lists.
+  recordingId String?
+  recording   Asset?  @relation("FeedbackRecording", fields: [recordingId], references: [id], onDelete: SetNull)
+
   assigneeId String?
   assignee   Member? @relation(fields: [assigneeId], references: [id], onDelete: SetNull)
 
