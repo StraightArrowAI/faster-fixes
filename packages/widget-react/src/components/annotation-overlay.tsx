@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
-import { domToBlob } from "modern-screenshot";
 import { useFeedbackContext } from "../context.js";
 import { overlayHighlightStyle } from "../styles.js";
+import { captureViewportBlob } from "../viewport-capture.js";
 
 export function AnnotationOverlay() {
   const {
@@ -42,13 +42,7 @@ export function AnnotationOverlay() {
       setClickCoords({ x: e.clientX, y: e.clientY });
 
       // Capture screenshot asynchronously, store promise for submit to await
-      const capturePromise = domToBlob(document.body, {
-        width: window.innerWidth,
-        height: window.innerHeight,
-        scale: window.devicePixelRatio || 1,
-        features: {
-          restoreScrollPosition: true,
-        },
+      const capturePromise = captureViewportBlob({
         // Inverted from html2canvas: return true to INCLUDE, false to EXCLUDE
         filter: (el: Node) => {
           if (el instanceof Element) return !el.hasAttribute("data-ff-widget");
