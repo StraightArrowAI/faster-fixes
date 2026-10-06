@@ -65,7 +65,10 @@ export function KanbanColumnBody({
     <div
       ref={setNodeRef}
       className={cn(
-        "flex flex-1 flex-col gap-2 rounded-lg border border-dashed p-2 transition-colors",
+        // min-w-0: as a flex item the lane would otherwise grow to fit a card's
+        // longest unbroken string (e.g. a pasted URL) and spill across the
+        // neighbouring lanes, breaking alignment with the header row.
+        "flex min-w-0 flex-1 flex-col gap-2 rounded-lg border border-dashed p-2 transition-colors",
         isOver ? "border-primary/50 bg-primary/5" : "border-transparent",
       )}
     >
