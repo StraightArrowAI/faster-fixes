@@ -4,6 +4,7 @@ import { inngest } from "@/server/inngest";
 import { protectedProcedure } from "@/server/trpc/trpc";
 import { TRPCError, type inferProcedureOutput } from "@trpc/server";
 import { UpdateFeedbackStatusSchema } from "./update-feedback-status.schema";
+import { updateFeedbackStatuses } from "@/server/feedback/update-feedback-statuses";
 
 export const updateFeedbackStatus = protectedProcedure
   .input(UpdateFeedbackStatusSchema)
@@ -16,7 +17,10 @@ export const updateFeedbackStatus = protectedProcedure
     });
 
     if (!feedback) {
-      throw new TRPCError({ code: "NOT_FOUND", message: "Feedback not found." });
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: "Feedback not found.",
+      });
     }
 
     const membership = await prisma.member.findFirst({
@@ -30,17 +34,22 @@ export const updateFeedbackStatus = protectedProcedure
       throw new TRPCError({ code: "FORBIDDEN", message: "Access denied." });
     }
 
-    await prisma.feedback.update({
-      where: { id: input.feedbackId },
-      data: { status: input.status },
-    });
+    await updateFeedbackStatuses(
+      prisma,
+      { id: input.feedbackId },
+      input.status,
+    );
 
     // Fire-and-forget: sync status to GitHub if linked
     inngest
       .send({
         name: "feedback/status-changed",
         // Dashboard edits are always a human in the inbox.
-        data: { feedbackId: input.feedbackId, newStatus: input.status, actor: "user" },
+        data: {
+          feedbackId: input.feedbackId,
+          newStatus: input.status,
+          actor: "user",
+        },
       })
       .catch(() => {});
 

@@ -12,13 +12,14 @@ model Project {
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
-  widgetConfig WidgetConfig?
-  reviewers    Reviewer[]
-  feedback     Feedback[]
-  gitHubLink   ProjectGitHubLink?
-  linearLink   ProjectLinearLink?
-  jiraLink     ProjectJiraLink?
-  slackLink    ProjectSlackLink?
+  widgetConfig    WidgetConfig?
+  reviewers       Reviewer[]
+  feedback        Feedback[]
+  gitHubLink      ProjectGitHubLink?
+  linearLink      ProjectLinearLink?
+  jiraLink        ProjectJiraLink?
+  slackLink       ProjectSlackLink?
+  feedbackColumns FeedbackColumn[]
 
   @@index([organizationId])
   @@index([publicId])
@@ -68,7 +69,12 @@ model Feedback {
 
   status  String @default("new")
   comment String
-  pageUrl String
+
+  // Board lane (ADR-0010). Null means "first column of the status category";
+  // when set, column.category always equals status.
+  columnId String?
+  column   FeedbackColumn? @relation(fields: [columnId], references: [id], onDelete: SetNull)
+  pageUrl  String
 
   clickX   Float?
   clickY   Float?
@@ -110,4 +116,24 @@ model Feedback {
   @@index([reviewerId])
   @@index([assigneeId])
   @@map("feedback")
+}
+
+// A per-Project kanban lane layered over Feedback.status (ADR-0010). Category is
+// one of the non-archived status literals and is immutable once created.
+model FeedbackColumn {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  name     String
+  category String
+  position Int
+
+  feedback Feedback[]
+
+  @@index([projectId, position])
+  @@map("feedback_column")
 }

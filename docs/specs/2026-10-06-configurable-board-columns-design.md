@@ -1,7 +1,7 @@
 # Configurable board columns
 
 - **Date**: 2026-10-06
-- **Status**: Draft — awaiting review
+- **Status**: Implemented
 - **Decision record**: [ADR-0010](../adr/0010-board-columns-are-a-layer-over-status.md)
 
 ## Goal
@@ -60,8 +60,9 @@ Every Project always has at least one column per category.
 ## Migration
 
 1. Create `feedback_column` and `feedback.columnId`.
-2. Seed three columns for every existing Project: New (`new`, 0), In progress
-   (`in_progress`, 1), Resolved (`resolved`, 2).
+2. Seed three columns for every existing Project: New (`new`, 0), In Progress
+   (`in_progress`, 1), Resolved (`resolved`, 2). Names match the labels of the
+   fixed board they replace, so existing boards render unchanged.
 3. Backfill `feedback.columnId` from `status` for non-archived rows, so later
    reordering doesn't move existing cards.
 4. Both project-create mutations (`sidebar/project/create` and
@@ -69,8 +70,11 @@ Every Project always has at least one column per category.
 
 ## Write rules
 
-A single server helper owns the invariant: `resolveColumnForStatus(tx, feedback, status)`
-returns the `columnId` to persist alongside a new status.
+Because `column.category === status` always holds, "keep the column if its category
+matches the new status" reduces to "only write when the status actually changes".
+`server/feedback/update-feedback-statuses.ts` (`updateFeedbackStatuses`) encodes that
+as one conditional `updateMany` — `WHERE status <> new` → `SET status, columnId = NULL` —
+so it needs no prior read and batches inside `$transaction([...])`.
 
 | Write | Effect |
 | --- | --- |
@@ -98,7 +102,10 @@ Paths that call the helper:
 - A tRPC query returns the Project's columns ordered by `position`.
 - `kanban-board.client.tsx` renders one lane per column and groups cards by
   `columnId ?? firstColumnOf(status)`. Archived cards remain excluded.
-- Card drop calls a new `moveFeedbackToColumn` mutation (single and bulk).
+- Card drop and bulk "move to" call `feedback.updateColumn`
+  (`update-feedbacks-column.trpc.mutation.ts`), which sets `columnId` and
+  `status = column.category` together and emits status-change events only for cards
+  whose status changed.
 - The panel's `status-select.client.tsx` and the bulk toolbar's "move to" list columns,
   plus the existing Archive action.
 
@@ -123,9 +130,10 @@ mapping files, `FeedbackStatusEnum`.
 
 ## Testing
 
-- Unit: `resolveColumnForStatus` — same-category keep, cross-category reset, archive,
-  unarchive, and the Linear `started` → card stays in In Test case.
-- Unit: board grouping with null `columnId`.
+- `updateFeedbackStatuses` against a real Postgres: same-status echo keeps In Test,
+  status change clears the column, archive/unarchive, mixed bulk, column delete
+  keeps status, other projects untouched. (The web app has no test runner; this was
+  run as a throwaway script against a scratch database.)
 - Migration: run `pnpm migrate:dev` against a seeded DB; assert every non-archived
   Feedback has a column whose category matches its status.
 - Manual: add In Test, move a card through it, confirm a linked Linear issue's state is

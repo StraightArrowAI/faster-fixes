@@ -4,6 +4,7 @@ import { inngest } from "@/server/inngest";
 import { protectedProcedure } from "@/server/trpc/trpc";
 import { TRPCError, type inferProcedureOutput } from "@trpc/server";
 import z from "zod";
+import { updateFeedbackStatuses } from "@/server/feedback/update-feedback-statuses";
 
 export const bulkUpdateFeedbackStatus = protectedProcedure
   .input(
@@ -21,7 +22,10 @@ export const bulkUpdateFeedbackStatus = protectedProcedure
     });
 
     if (!firstFeedback) {
-      throw new TRPCError({ code: "NOT_FOUND", message: "Feedback not found." });
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: "Feedback not found.",
+      });
     }
 
     const membership = await prisma.member.findFirst({
@@ -35,10 +39,11 @@ export const bulkUpdateFeedbackStatus = protectedProcedure
       throw new TRPCError({ code: "FORBIDDEN", message: "Access denied." });
     }
 
-    await prisma.feedback.updateMany({
-      where: { id: { in: input.feedbackIds } },
-      data: { status: input.status },
-    });
+    await updateFeedbackStatuses(
+      prisma,
+      { id: { in: input.feedbackIds } },
+      input.status,
+    );
 
     // Fan-out: one event per feedback so each gets independent retries and
     // fault isolation — a single failing GitHub sync won't block the others.

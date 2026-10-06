@@ -5,6 +5,7 @@ import { Alert, AlertDescription } from "@workspace/ui/components/alert";
 import { AlertTriangleIcon } from "lucide-react";
 
 import { ApiKeyMigrationNotice } from "./api-key-migration-notice.client";
+import { BoardColumnsSection } from "./board-columns/board-columns-section.client";
 import { DeleteProjectButton } from "./delete/delete-project-button.client";
 import { GitHubSection } from "./github/github-section.client";
 import { JiraSection } from "./jira/jira-section.client";
@@ -26,6 +27,15 @@ export function ProjectSettingsTab({ projectId }: ProjectSettingsTabProps) {
         cardClassName="lg:max-w-lg"
       >
         <UpdateProjectForm projectId={projectId} />
+      </DashboardSection>
+
+      <DashboardSection
+        title="Board columns"
+        description="Define the columns on the inbox board. Each column belongs to a status group, which is what integrations and the widget see."
+        cardTitle="Columns"
+        cardClassName="lg:max-w-lg"
+      >
+        <BoardColumnsSection projectId={projectId} />
       </DashboardSection>
 
       <DashboardSection

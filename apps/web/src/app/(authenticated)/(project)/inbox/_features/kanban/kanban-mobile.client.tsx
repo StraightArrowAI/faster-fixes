@@ -43,7 +43,7 @@ export function KanbanMobile({
       onValueChange={setActiveColumn}
       className="lg:hidden"
     >
-      <TabsList className="w-full">
+      <TabsList className="w-full justify-start overflow-x-auto">
         {columns.map((col) => (
           <TabsTrigger key={col.id} value={col.id}>
             {col.title}

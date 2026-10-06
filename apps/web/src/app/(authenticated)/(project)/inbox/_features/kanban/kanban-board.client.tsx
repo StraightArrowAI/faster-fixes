@@ -1,6 +1,7 @@
 "use client";
 
 import { useFeedbackMutations } from "@/app/(authenticated)/(project)/inbox/_features/use-feedback-mutations";
+import type { GetFeedbackColumnsOutput } from "@/app/(authenticated)/(project)/settings/_features/board-columns/get-feedback-columns.trpc.query";
 import {
   closestCorners,
   DndContext,
@@ -15,6 +16,7 @@ import {
 import * as React from "react";
 import { BulkActionToolbar } from "../actions-toolbar/bulk-action-toolbar.client";
 import type { GetFeedbackOutput } from "../get-feedback.trpc.query";
+import { getBoardColumnId } from "./get-board-column-id";
 import { KanbanCardOverlay } from "./kanban-card.client";
 import { KanbanColumnBody, KanbanColumnHeader } from "./kanban-column.client";
 import { KanbanMobile } from "./kanban-mobile.client";
@@ -23,16 +25,11 @@ type FeedbackItem = GetFeedbackOutput[number];
 
 type KanbanBoardProps = {
   feedback: FeedbackItem[];
+  columns: GetFeedbackColumnsOutput;
   pageUrlFilter: string | null;
   sort: string;
   onSelectFeedback: (id: string) => void;
 };
-
-const COLUMNS = [
-  { id: "new", title: "New" },
-  { id: "in_progress", title: "In Progress" },
-  { id: "resolved", title: "Resolved" },
-] as const;
 
 function sortFeedback(items: FeedbackItem[], sort: string): FeedbackItem[] {
   return [...items].sort((a, b) => {
@@ -55,11 +52,12 @@ function sortFeedback(items: FeedbackItem[], sort: string): FeedbackItem[] {
 
 export function KanbanBoard({
   feedback,
+  columns,
   pageUrlFilter,
   sort,
   onSelectFeedback,
 }: KanbanBoardProps) {
-  const { updateStatus, bulkUpdateStatus } = useFeedbackMutations();
+  const { bulkUpdateStatus, updateColumn } = useFeedbackMutations();
   const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set());
   const [activeId, setActiveId] = React.useState<string | null>(null);
 
@@ -81,28 +79,30 @@ export function KanbanBoard({
   }, [feedback, pageUrlFilter]);
 
   const grouped = React.useMemo(() => {
-    const map: Record<string, FeedbackItem[]> = {
-      new: [],
-      in_progress: [],
-      resolved: [],
-    };
+    const map: Record<string, FeedbackItem[]> = Object.fromEntries(
+      columns.map((c) => [c.id, []]),
+    );
     for (const item of filtered) {
-      map[item.status]?.push(item);
+      const columnId = getBoardColumnId(item, columns);
+      if (columnId) map[columnId]?.push(item);
     }
     // Sort each column
     for (const key of Object.keys(map)) {
       map[key] = sortFeedback(map[key]!, sort);
     }
     return map;
-  }, [filtered, sort]);
+  }, [filtered, columns, sort]);
+
+  const boardColumns = columns.map((c) => ({ id: c.id, title: c.name }));
 
   const totalCount = filtered.length;
 
   const bulkToolbar = (
     <BulkActionToolbar
       selectedItems={feedback.filter((f) => selectedIds.has(f.id))}
-      onMoveToStatus={(status) => handleBulkAction(status)}
-      onArchive={() => handleBulkAction("closed")}
+      columns={columns}
+      onMoveToColumn={handleBulkMove}
+      onArchive={handleBulkArchive}
       onClearSelection={() => setSelectedIds(new Set())}
     />
   );
@@ -117,12 +117,12 @@ export function KanbanBoard({
     if (!over) return;
 
     const feedbackId = active.id as string;
-    const newStatus = over.id as string;
+    const columnId = over.id as string;
 
     const item = feedback.find((f) => f.id === feedbackId);
-    if (!item || item.status === newStatus) return;
+    if (!item || getBoardColumnId(item, columns) === columnId) return;
 
-    updateStatus(feedbackId, newStatus);
+    updateColumn([feedbackId], columnId);
   }
 
   function handleDragCancel() {
@@ -158,10 +158,17 @@ export function KanbanBoard({
     });
   }
 
-  function handleBulkAction(status: string) {
+  function handleBulkMove(columnId: string) {
     const ids = Array.from(selectedIds);
     if (ids.length === 0) return;
-    bulkUpdateStatus(ids, status);
+    updateColumn(ids, columnId);
+    setSelectedIds(new Set());
+  }
+
+  function handleBulkArchive() {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    bulkUpdateStatus(ids, "closed");
     setSelectedIds(new Set());
   }
 
@@ -174,7 +181,7 @@ export function KanbanBoard({
       </div>
 
       <KanbanMobile
-        columns={COLUMNS}
+        columns={boardColumns}
         grouped={grouped}
         selectedIds={selectedIds}
         toolbar={bulkToolbar}
@@ -183,24 +190,10 @@ export function KanbanBoard({
         onSelectFeedback={onSelectFeedback}
       />
 
-      {/* Desktop: column headers */}
-      <div className="hidden gap-4 lg:grid lg:grid-cols-3">
-        {COLUMNS.map((col) => (
-          <KanbanColumnHeader
-            key={col.id}
-            id={col.id}
-            title={col.title}
-            count={(grouped[col.id] ?? []).length}
-            selectedIds={selectedIds}
-            itemIds={(grouped[col.id] ?? []).map((i) => i.id)}
-            onToggleSelectAll={handleToggleSelectAll}
-          />
-        ))}
-      </div>
-
       <div className="hidden lg:block">{bulkToolbar}</div>
 
-      {/* Desktop: columns with DnD */}
+      {/* Desktop: headers and bodies share one scroll container so lanes stay
+          aligned when a project has more columns than fit the viewport. */}
       <DndContext
         sensors={sensors}
         collisionDetection={closestCorners}
@@ -208,17 +201,34 @@ export function KanbanBoard({
         onDragEnd={handleDragEnd}
         onDragCancel={handleDragCancel}
       >
-        <div className="hidden gap-4 lg:grid lg:grid-cols-3">
-          {COLUMNS.map((col) => (
-            <KanbanColumnBody
-              key={col.id}
-              id={col.id}
-              items={grouped[col.id] ?? []}
-              selectedIds={selectedIds}
-              onToggleSelect={handleToggleSelect}
-              onSelectFeedback={onSelectFeedback}
-            />
-          ))}
+        <div className="hidden flex-col gap-4 overflow-x-auto pb-2 lg:flex">
+          <div className="flex gap-4">
+            {boardColumns.map((col) => (
+              <div key={col.id} className="min-w-64 flex-1">
+                <KanbanColumnHeader
+                  id={col.id}
+                  title={col.title}
+                  count={(grouped[col.id] ?? []).length}
+                  selectedIds={selectedIds}
+                  itemIds={(grouped[col.id] ?? []).map((i) => i.id)}
+                  onToggleSelectAll={handleToggleSelectAll}
+                />
+              </div>
+            ))}
+          </div>
+          <div className="flex gap-4">
+            {boardColumns.map((col) => (
+              <div key={col.id} className="flex min-w-64 flex-1">
+                <KanbanColumnBody
+                  id={col.id}
+                  items={grouped[col.id] ?? []}
+                  selectedIds={selectedIds}
+                  onToggleSelect={handleToggleSelect}
+                  onSelectFeedback={onSelectFeedback}
+                />
+              </div>
+            ))}
+          </div>
         </div>
         {/* dropAnimation=null avoids the overlay sliding back to the source
             slot when the item has actually moved to another column. */}

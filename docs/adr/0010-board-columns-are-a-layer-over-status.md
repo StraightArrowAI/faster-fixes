@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 ---
 
 # Board columns are a per-Project layer over Status, not a replacement for it
@@ -30,8 +30,8 @@ A foreign key with `onDelete: SetNull` makes column deletion safe without cleanu
 
 ## Consequences
 
-- One helper, `resolveColumnForStatus`, owns the `column.category === status`
-  invariant. An inbound tracker status keeps the current column when its category
+- One helper, `updateFeedbackStatuses`, owns the `column.category === status`
+  invariant for every status write outside the board. An inbound tracker status keeps the current column when its category
   already matches, so a sync never pulls a card out of a same-category lane.
 - Moves between columns of the same category are invisible to trackers and
   notifications by design.

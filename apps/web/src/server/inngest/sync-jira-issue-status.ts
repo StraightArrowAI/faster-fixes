@@ -3,6 +3,7 @@ import { feedbackStatusFromJiraStatusCategory } from "@/server/jira/resolve-tran
 import { getValidJiraAccessToken } from "@/server/jira/token-access";
 import { prisma } from "@workspace/db";
 import { inngest } from "./index";
+import { updateFeedbackStatuses } from "@/server/feedback/update-feedback-statuses";
 
 const SYNC_LOOP_WINDOW_MS = 30_000;
 
@@ -67,7 +68,9 @@ export const syncJiraIssueStatus = inngest.createFunction(
     // Confirmed gone. Detaching rather than cascading to the Feedback keeps the
     // inbox intact and lets the Feedback be exported to Jira again.
     if (!issue) {
-      await prisma.feedbackJiraIssueLink.delete({ where: { id: issueLink.id } });
+      await prisma.feedbackJiraIssueLink.delete({
+        where: { id: issueLink.id },
+      });
       return { feedbackId: issueLink.feedbackId, detached: true };
     }
 
@@ -116,10 +119,7 @@ export const syncJiraIssueStatus = inngest.createFunction(
     }
 
     await prisma.$transaction([
-      prisma.feedback.update({
-        where: { id: issueLink.feedbackId },
-        data: { status: newStatus },
-      }),
+      updateFeedbackStatuses(prisma, { id: issueLink.feedbackId }, newStatus),
       prisma.feedbackJiraIssueLink.update({
         where: { id: issueLink.id },
         data: {

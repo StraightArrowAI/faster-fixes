@@ -6,6 +6,7 @@ import { enforceLimit } from "@/server/trpc/middlewares/enforce-limit";
 import { planAwareProcedure } from "@/server/trpc/middlewares/with-plan-context";
 import { TRPCError, inferProcedureOutput } from "@trpc/server";
 import { CreateProjectSchema } from "./create-project.schema";
+import { DEFAULT_FEEDBACK_COLUMNS } from "@/server/feedback/default-feedback-columns";
 
 export const createProject = planAwareProcedure
   .use(enforceLimit("projects"))
@@ -41,6 +42,7 @@ export const createProject = planAwareProcedure
         widgetConfig: {
           create: {},
         },
+        feedbackColumns: { create: DEFAULT_FEEDBACK_COLUMNS },
       },
     });
 

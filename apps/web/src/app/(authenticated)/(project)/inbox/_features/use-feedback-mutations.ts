@@ -4,6 +4,15 @@ import { useTRPC } from "@/lib/trpc/trpc-client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
+// Optimistic twin of updateFeedbackStatuses: a real status change drops the
+// card into the first column of its new category.
+function withStatus(
+  f: GetFeedbackOutput[number],
+  status: string,
+): GetFeedbackOutput[number] {
+  return f.status === status ? f : { ...f, status, columnId: null };
+}
+
 export function useFeedbackMutations() {
   const { activeProject } = useActiveProject();
   const projectId = activeProject!.id;
@@ -11,6 +20,9 @@ export function useFeedbackMutations() {
   const queryClient = useQueryClient();
 
   const feedbackQueryKey = trpc.authenticated.projects.feedback.list.queryKey({
+    projectId,
+  });
+  const columnsQueryKey = trpc.authenticated.projects.columns.list.queryKey({
     projectId,
   });
 
@@ -23,7 +35,7 @@ export function useFeedbackMutations() {
         queryClient.setQueryData(
           feedbackQueryKey,
           (old: GetFeedbackOutput | undefined) =>
-            old?.map((f) => (f.id === feedbackId ? { ...f, status } : f)),
+            old?.map((f) => (f.id === feedbackId ? withStatus(f, status) : f)),
         );
 
         return { previous };
@@ -50,7 +62,7 @@ export function useFeedbackMutations() {
         queryClient.setQueryData(
           feedbackQueryKey,
           (old: GetFeedbackOutput | undefined) =>
-            old?.map((f) => (idSet.has(f.id) ? { ...f, status } : f)),
+            old?.map((f) => (idSet.has(f.id) ? withStatus(f, status) : f)),
         );
 
         return { previous };
@@ -60,6 +72,42 @@ export function useFeedbackMutations() {
           queryClient.setQueryData(feedbackQueryKey, context.previous);
         }
         toast.error("Failed to update status.");
+      },
+      onSettled: () => {
+        queryClient.invalidateQueries({ queryKey: feedbackQueryKey });
+      },
+    }),
+  );
+
+  const updateColumn = useMutation(
+    trpc.authenticated.projects.feedback.updateColumn.mutationOptions({
+      onMutate: async ({ feedbackIds, columnId }) => {
+        await queryClient.cancelQueries({ queryKey: feedbackQueryKey });
+        const previous = queryClient.getQueryData(feedbackQueryKey);
+        const column = queryClient
+          .getQueryData(columnsQueryKey)
+          ?.find((c) => c.id === columnId);
+        const idSet = new Set(feedbackIds);
+
+        if (column) {
+          queryClient.setQueryData(
+            feedbackQueryKey,
+            (old: GetFeedbackOutput | undefined) =>
+              old?.map((f) =>
+                idSet.has(f.id)
+                  ? { ...f, columnId, status: column.category }
+                  : f,
+              ),
+          );
+        }
+
+        return { previous };
+      },
+      onError: (_err, _vars, context) => {
+        if (context?.previous) {
+          queryClient.setQueryData(feedbackQueryKey, context.previous);
+        }
+        toast.error("Failed to move feedback.");
       },
       onSettled: () => {
         queryClient.invalidateQueries({ queryKey: feedbackQueryKey });
@@ -89,6 +137,8 @@ export function useFeedbackMutations() {
         feedbackIds,
         status: status as "new" | "in_progress" | "resolved" | "closed",
       }),
+    updateColumn: (feedbackIds: string[], columnId: string) =>
+      updateColumn.mutate({ feedbackIds, columnId }),
     updateAssignee: (feedbackId: string, assigneeId: string | null) =>
       updateAssignee.mutate({ feedbackId, assigneeId }),
   };

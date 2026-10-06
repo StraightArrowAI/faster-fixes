@@ -5,6 +5,7 @@ import { generatePublicId } from "@/app/_features/project/generate-public-id";
 import { protectedProcedure } from "@/server/trpc/trpc";
 import { TRPCError, inferProcedureOutput } from "@trpc/server";
 import { CreateOnboardingProjectSchema } from "./create-project.schema";
+import { DEFAULT_FEEDBACK_COLUMNS } from "@/server/feedback/default-feedback-columns";
 
 export const createOnboardingProject = protectedProcedure
   .input(CreateOnboardingProjectSchema)
@@ -49,6 +50,7 @@ export const createOnboardingProject = protectedProcedure
         apiKeyLastFour: lastFour,
         organizationId: membership.organizationId,
         widgetConfig: { create: {} },
+        feedbackColumns: { create: DEFAULT_FEEDBACK_COLUMNS },
       },
     });
 

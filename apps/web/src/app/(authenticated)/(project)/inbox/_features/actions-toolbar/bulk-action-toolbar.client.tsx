@@ -1,5 +1,6 @@
 "use client";
 
+import type { GetFeedbackColumnsOutput } from "@/app/(authenticated)/(project)/settings/_features/board-columns/get-feedback-columns.trpc.query";
 import { Badge } from "@workspace/ui/components/badge";
 import { Button } from "@workspace/ui/components/button";
 import { Separator } from "@workspace/ui/components/separator";
@@ -9,20 +10,16 @@ import { CopySelectedMarkdown } from "./copy-selected-markdown.client";
 
 type BulkActionToolbarProps = {
   selectedItems: GetFeedbackOutput[number][];
-  onMoveToStatus: (status: string) => void;
+  columns: GetFeedbackColumnsOutput;
+  onMoveToColumn: (columnId: string) => void;
   onArchive: () => void;
   onClearSelection: () => void;
 };
 
-const STATUS_OPTIONS = [
-  { value: "new", label: "New" },
-  { value: "in_progress", label: "In Progress" },
-  { value: "resolved", label: "Resolved" },
-] as const;
-
 export function BulkActionToolbar({
   selectedItems,
-  onMoveToStatus,
+  columns,
+  onMoveToColumn,
   onArchive,
   onClearSelection,
 }: BulkActionToolbarProps) {
@@ -41,18 +38,18 @@ export function BulkActionToolbar({
         className="ml-2 data-[orientation=vertical]:h-5"
       />
 
-      <div className="flex items-center gap-1">
+      <div className="flex flex-wrap items-center gap-1">
         <span className="text-muted-foreground ml-2 text-xs">Move to:</span>
-        {STATUS_OPTIONS.map((option) => (
+        {columns.map((column) => (
           <Button
-            key={option.value}
+            key={column.id}
             variant="outline"
             size="sm"
-            onClick={() => onMoveToStatus(option.value)}
+            onClick={() => onMoveToColumn(column.id)}
             className="h-7 text-xs"
           >
             <ArrowRight className="mr-1 size-3" />
-            {option.label}
+            {column.name}
           </Button>
         ))}
       </div>

@@ -10,6 +10,7 @@ import {
   isAuthFailure,
   requireAgentAuth,
 } from "../../../../_utils/require-agent-auth";
+import { updateFeedbackStatuses } from "@/server/feedback/update-feedback-statuses";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -55,9 +56,9 @@ export async function updateFeedbackStatus(
   }
 
   const previousStatus = feedback.status;
-  const updated = await prisma.feedback.update({
+  await updateFeedbackStatuses(prisma, { id: feedback.id }, parsed.data.status);
+  const updated = await prisma.feedback.findUniqueOrThrow({
     where: { id: feedback.id },
-    data: { status: parsed.data.status },
     select: { id: true, status: true, updatedAt: true },
   });
 
@@ -73,7 +74,11 @@ export async function updateFeedbackStatus(
       .send({
         name: "feedback/status-changed",
         // actor "agent": this endpoint is only reachable with an agent token.
-        data: { feedbackId: feedback.id, newStatus: parsed.data.status, actor: "agent" },
+        data: {
+          feedbackId: feedback.id,
+          newStatus: parsed.data.status,
+          actor: "agent",
+        },
       })
       .catch(() => {});
   }

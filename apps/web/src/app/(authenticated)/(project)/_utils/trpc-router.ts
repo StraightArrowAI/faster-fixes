@@ -43,6 +43,12 @@ import { setProjectSlackChannel } from "../settings/_features/slack/link-channel
 import { updateProjectSlackLink } from "../settings/_features/slack/update-link/update-project-slack-link.trpc.mutation";
 import { regenerateApiKey } from "../settings/_features/regenerate-api-key/regenerate-api-key.trpc.mutation";
 import { updateProject } from "../settings/_features/update/update-project.trpc.mutation";
+import { createFeedbackColumn } from "../settings/_features/board-columns/create-feedback-column.trpc.mutation";
+import { deleteFeedbackColumn } from "../settings/_features/board-columns/delete-feedback-column.trpc.mutation";
+import { getFeedbackColumns } from "../settings/_features/board-columns/get-feedback-columns.trpc.query";
+import { updateFeedbackColumnPosition } from "../settings/_features/board-columns/update-feedback-column-position.trpc.mutation";
+import { updateFeedbackColumn } from "../settings/_features/board-columns/update-feedback-column.trpc.mutation";
+import { updateFeedbacksColumn } from "../inbox/_features/kanban/update-feedbacks-column.trpc.mutation";
 import { getProjects } from "./get-projects.trpc.query";
 
 export const projectsRouter = router({
@@ -67,6 +73,7 @@ export const projectsRouter = router({
     updateStatus: updateFeedbackStatus,
     updateAssignee: updateFeedbackAssignee,
     bulkUpdateStatus: bulkUpdateFeedbackStatus,
+    updateColumn: updateFeedbacksColumn,
     hardDelete: hardDeleteFeedback,
     bulkHardDelete: bulkHardDeleteFeedback,
     createIssue: createIssueForFeedback,
@@ -96,6 +103,13 @@ export const projectsRouter = router({
     linkProject: linkJiraProject,
     unlinkProject: unlinkJiraProject,
     updateLink: updateProjectJiraLink,
+  }),
+  columns: router({
+    list: getFeedbackColumns,
+    create: createFeedbackColumn,
+    update: updateFeedbackColumn,
+    updatePosition: updateFeedbackColumnPosition,
+    delete: deleteFeedbackColumn,
   }),
   slack: router({
     getLink: getProjectSlackLink,

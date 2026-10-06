@@ -85,6 +85,7 @@ export const getFeedback = protectedProcedure
         createdAt: f.createdAt,
         updatedAt: f.updatedAt,
         status: f.status,
+        columnId: f.columnId,
         comment: f.comment,
         pageUrl: f.pageUrl,
         clickX: f.clickX,

@@ -1,5 +1,6 @@
 import { prisma } from "@workspace/db";
 import { inngest } from "./index";
+import { updateFeedbackStatuses } from "@/server/feedback/update-feedback-statuses";
 
 const SYNC_LOOP_WINDOW_MS = 30_000;
 
@@ -44,10 +45,7 @@ export const syncGitHubIssueStatus = inngest.createFunction(
     }
 
     await prisma.$transaction([
-      prisma.feedback.update({
-        where: { id: issueLink.feedbackId },
-        data: { status: newStatus },
-      }),
+      updateFeedbackStatuses(prisma, { id: issueLink.feedbackId }, newStatus),
       prisma.feedbackIssueLink.update({
         where: { id: issueLink.id },
         data: {

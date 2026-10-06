@@ -10,6 +10,7 @@ import {
 } from "@workspace/ui/components/sheet";
 import { format, formatDistanceToNow } from "date-fns";
 import { ExternalLink, ImageOff, VideoOff } from "lucide-react";
+import type { GetFeedbackColumnsOutput } from "@/app/(authenticated)/(project)/settings/_features/board-columns/get-feedback-columns.trpc.query";
 import type { GetFeedbackOutput } from "../get-feedback.trpc.query";
 import { AssigneeSelect } from "./assignee-select.client";
 import { CopyFeedbackMarkdown } from "./copy-feedback-markdown.client";
@@ -26,6 +27,7 @@ type FeedbackDetailPanelProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   projectId: string;
+  columns: GetFeedbackColumnsOutput;
   hasGitHubLink?: boolean;
   hasLinearLink?: boolean;
   hasJiraLink?: boolean;
@@ -50,6 +52,7 @@ export function FeedbackDetailPanel({
   open,
   onOpenChange,
   projectId,
+  columns,
   hasGitHubLink = false,
   hasLinearLink = false,
   hasJiraLink = false,
@@ -149,9 +152,7 @@ export function FeedbackDetailPanel({
             (() => {
               const md = feedback.metadata as Record<string, unknown>;
               const hasContext =
-                md.elementDescription ||
-                md.reactComponentPath ||
-                md.sourceFile;
+                md.elementDescription || md.reactComponentPath || md.sourceFile;
               if (!hasContext) return null;
               return (
                 <>
@@ -208,10 +209,7 @@ export function FeedbackDetailPanel({
 
           <Separator />
 
-          <StatusSelect
-            feedbackId={feedback.id}
-            value={feedback.status}
-          />
+          <StatusSelect feedback={feedback} columns={columns} />
 
           <TrackersSection
             feedbackId={feedback.id}

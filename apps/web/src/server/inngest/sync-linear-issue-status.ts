@@ -2,6 +2,7 @@ import { feedbackStatusFromLinearStateType } from "@/server/linear/state-mapping
 import type { LinearStateType } from "@/server/linear/state-mapping";
 import { prisma } from "@workspace/db";
 import { inngest } from "./index";
+import { updateFeedbackStatuses } from "@/server/feedback/update-feedback-statuses";
 
 const SYNC_LOOP_WINDOW_MS = 60_000;
 
@@ -46,10 +47,7 @@ export const syncLinearIssueStatus = inngest.createFunction(
     const newStatus = feedbackStatusFromLinearStateType(stateType);
 
     await prisma.$transaction([
-      prisma.feedback.update({
-        where: { id: issueLink.feedbackId },
-        data: { status: newStatus },
-      }),
+      updateFeedbackStatuses(prisma, { id: issueLink.feedbackId }, newStatus),
       prisma.feedbackLinearIssueLink.update({
         where: { id: issueLink.id },
         data: {
