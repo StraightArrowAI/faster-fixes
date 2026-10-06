@@ -7,8 +7,9 @@
 - The user MAY delete files. If a file is already deleted (shows as `deleted` in git status), do NOT restore it — include the deletion as-is in the commit.
 - Never edit `.env`, `.env.local`, or any `.env*` file.
 - If env vars change, update `.env.example` only.
-- Never run production database migrations (`pnpm migrate:prod`).
-- Only run development migrations (`pnpm migrate:dev`); production migration execution is user-managed.
+- Never run production database migrations by hand (`pnpm migrate:prod`). Vercel production builds apply pending migrations before building (`packages/database/scripts/migrate-on-vercel.mjs`, ADR-0011); a failed migration fails the deploy.
+- Every migration must work with the previously deployed code, which keeps serving while the new build runs. Add columns/tables first; drop or rename only in a later deploy.
+- Only run development migrations (`pnpm migrate:dev`).
 - Code identifiers, comments, filenames, schemas: English only.
 - User-facing UI copy: English only. Professional, clear, and concise — match the tone of serious developer tools (e.g., Vercel, Linear, Stripe). No marketing fluff, no casual language, no exclamation marks. Prefer precise, understated wording.
 - All `unstable_cache` usage must include `cacheTags` from `@/server/cache/cache-tags`.
