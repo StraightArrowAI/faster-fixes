@@ -54,6 +54,7 @@ Each dot-separated label is a sequence of:
 Validation (rejected on save, with a message):
 
 - Two adjacent wildcard tokens in one label (`{a}{b}`, `*{a}`).
+- More than two tokens in one label (bounds regex backtracking on hostile `Origin` values).
 - A placeholder name used twice in one pattern.
 - The last two labels are not both pure literals (`*.com`, `rms.{x}.app`). This
   fixes at least a domain and TLD; it cannot know public suffixes, so
@@ -70,7 +71,8 @@ is the only gate on unauthenticated widget endpoints.
 ## Matching
 
 1. Host = `Origin` header, falling back to `Referer`; parsed as a URL, hostname
-   lowercased, trailing dot removed. Port ignored. `www.` is **not** stripped. No
+   lowercased, trailing dot removed. Port ignored. Hosts over 253 characters or with a
+   label over 63 never match a rule (DNS limits; bounds matcher input). `www.` is **not** stripped. No
    header → rejected (unchanged).
 2. For each rule in `position` order: match only if the host has the same number of
    labels as the pattern and every label matches its anchored regex. With two tokens
@@ -207,7 +209,7 @@ Board columns:
 
 - **Main domain**: the existing field in the project form, unchanged; helper text points
   to the rules.
-- **Domain rules**: ordered list, drag to reorder. Each row: pattern, fixed-tag chips,
+- **Domain rules**: ordered list, reordered with up/down buttons like Board columns. Each row: pattern, fixed-tag chips,
   edit, delete. Add/edit dialog: pattern input with live validation via
   `compile-host-pattern`, the shared-hosting warning, a fixed-tags editor, and a
   **test box** (enter a hostname → allowed or not, the matching rule, resulting tags).

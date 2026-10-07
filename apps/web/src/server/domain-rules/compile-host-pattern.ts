@@ -14,6 +14,13 @@ const LITERAL_LABEL = /^[a-z0-9-]+$/;
 // Tokens are confined to one label so `{env}` can never absorb `dev.evil`; the
 // pattern doubles as the access gate (ADR-0012).
 const TOKEN_MATCH = "[a-z0-9-]+";
+// Each extra token in a label multiplies regex backtracking on a hostile Origin;
+// two keeps worst case quadratic in a 63-char label.
+const MAX_TOKENS_PER_LABEL = 2;
+// DNS limits. Hosts beyond them are never real browser origins, and rejecting
+// them up front bounds matcher input regardless of what a client sends.
+const MAX_HOST_LENGTH = 253;
+const MAX_LABEL_LENGTH = 63;
 
 export function normalizeHostPattern(raw: string): string {
   return raw.trim().toLowerCase();
@@ -39,6 +46,7 @@ export function compileHostPattern(raw: string): CompileHostPatternResult {
   for (const label of labels) {
     let regex = "";
     let previousWasToken = false;
+    let tokenCount = 0;
     let i = 0;
 
     while (i < label.length) {
@@ -61,6 +69,11 @@ export function compileHostPattern(raw: string): CompileHostPatternResult {
             "Wildcards and placeholders cannot be adjacent; separate them with text.",
           );
         }
+        if (++tokenCount > MAX_TOKENS_PER_LABEL) {
+          return fail(
+            "A label can contain at most two wildcards or placeholders.",
+          );
+        }
         placeholders.push(name);
         regex += `(${TOKEN_MATCH})`;
         previousWasToken = true;
@@ -72,6 +85,11 @@ export function compileHostPattern(raw: string): CompileHostPatternResult {
         if (previousWasToken) {
           return fail(
             "Wildcards and placeholders cannot be adjacent; separate them with text.",
+          );
+        }
+        if (++tokenCount > MAX_TOKENS_PER_LABEL) {
+          return fail(
+            "A label can contain at most two wildcards or placeholders.",
           );
         }
         regex += TOKEN_MATCH;
@@ -109,8 +127,10 @@ export function matchCompiledPattern(
   pattern: CompiledHostPattern,
   host: string,
 ): Record<string, string> | null {
+  if (host.length > MAX_HOST_LENGTH) return null;
   const hostLabels = host.split(".");
   if (hostLabels.length !== pattern.labels.length) return null;
+  if (hostLabels.some((label) => label.length > MAX_LABEL_LENGTH)) return null;
 
   const captured: string[] = [];
   for (let i = 0; i < hostLabels.length; i++) {

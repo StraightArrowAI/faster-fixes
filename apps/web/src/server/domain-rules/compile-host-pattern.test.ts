@@ -46,6 +46,8 @@ describe("compileHostPattern", () => {
     ["https://rms.straightarrow.ai", "invalid character"],
     ["rms.straightarrow.ai:3000", "invalid character"],
     [`${"a".repeat(250)}.straightarrow.ai`, "253"],
+    ["a*b*c*d.straightarrow.ai", "at most two"],
+    ["{a}-{b}-{c}.straightarrow.ai", "at most two"],
   ])("rejects %s (%s)", (pattern, message) => {
     const result = compileHostPattern(pattern);
     expect(result.ok).toBe(false);
@@ -108,6 +110,23 @@ describe("matchCompiledPattern", () => {
       a: "x-y",
       b: "z",
     });
+  });
+
+  it("rejects hosts beyond DNS length limits without matching", () => {
+    const p = compileOk("{a}-{b}.straightarrow.ai");
+    expect(
+      matchCompiledPattern(p, `${"a".repeat(64)}.straightarrow.ai`),
+    ).toBeNull();
+    expect(
+      matchCompiledPattern(p, `${"a-".repeat(200)}.straightarrow.ai`),
+    ).toBeNull();
+  });
+
+  it("stays fast on a hostile label at the length limit", () => {
+    const p = compileOk("{a}-{b}.straightarrow.ai");
+    const start = performance.now();
+    matchCompiledPattern(p, `${"-".repeat(62)}x.straightarrow.ai`);
+    expect(performance.now() - start).toBeLessThan(50);
   });
 
   it("matches literal localhost", () => {
