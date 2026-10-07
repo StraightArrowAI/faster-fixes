@@ -137,7 +137,8 @@ export function UpdateProjectForm({ projectId }: UpdateProjectFormProps) {
               <FormDescription>
                 Subdomains, www., and protocol variants are matched
                 automatically. Localhost is always allowed for local
-                development.
+                development. Configure additional hosts and environments under
+                Domains & environments.
               </FormDescription>
               <FormMessage />
             </FormItem>

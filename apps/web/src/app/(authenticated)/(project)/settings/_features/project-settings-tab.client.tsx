@@ -6,6 +6,7 @@ import { AlertTriangleIcon } from "lucide-react";
 
 import { ApiKeyMigrationNotice } from "./api-key-migration-notice.client";
 import { BoardColumnsSection } from "./board-columns/board-columns-section.client";
+import { DomainRulesSection } from "./domain-rules/domain-rules-section.client";
 import { DeleteProjectButton } from "./delete/delete-project-button.client";
 import { GitHubSection } from "./github/github-section.client";
 import { JiraSection } from "./jira/jira-section.client";
@@ -36,6 +37,15 @@ export function ProjectSettingsTab({ projectId }: ProjectSettingsTabProps) {
         cardClassName="lg:max-w-lg"
       >
         <BoardColumnsSection projectId={projectId} />
+      </DashboardSection>
+
+      <DashboardSection
+        title="Domains & environments"
+        description="Allow the widget on additional hosts and tag feedback with the environment it came from."
+        cardTitle="Domain rules"
+        cardClassName="lg:max-w-2xl"
+      >
+        <DomainRulesSection projectId={projectId} />
       </DashboardSection>
 
       <DashboardSection

@@ -4,6 +4,8 @@ import { protectedProcedure } from "@/server/trpc/trpc";
 import { inferProcedureOutput, TRPCError } from "@trpc/server";
 import z from "zod";
 
+import { parseEnvironmentColors } from "../../_features/environment/environment-color.schema";
+
 export const getProject = protectedProcedure
   .input(z.object({ projectId: z.string() }))
   .query(async ({ input, ctx }) => {
@@ -36,6 +38,7 @@ export const getProject = protectedProcedure
       domain: project.domain,
       apiKeyLastFour: project.apiKeyLastFour,
       createdAt: project.createdAt,
+      environmentColors: parseEnvironmentColors(project.environmentColors),
       widgetConfig: project.widgetConfig
         ? {
             enabled: project.widgetConfig.enabled,

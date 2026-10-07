@@ -49,6 +49,12 @@ import { deleteFeedbackColumn } from "../settings/_features/board-columns/delete
 import { getFeedbackColumns } from "../settings/_features/board-columns/get-feedback-columns.trpc.query";
 import { updateFeedbackColumnPosition } from "../settings/_features/board-columns/update-feedback-column-position.trpc.mutation";
 import { updateFeedbackColumn } from "../settings/_features/board-columns/update-feedback-column.trpc.mutation";
+import { createDomainRule } from "../settings/_features/domain-rules/create-domain-rule.trpc.mutation";
+import { deleteDomainRule } from "../settings/_features/domain-rules/delete-domain-rule.trpc.mutation";
+import { getDomainRules } from "../settings/_features/domain-rules/get-domain-rules.trpc.query";
+import { updateDomainRulePosition } from "../settings/_features/domain-rules/update-domain-rule-position.trpc.mutation";
+import { updateDomainRule } from "../settings/_features/domain-rules/update-domain-rule.trpc.mutation";
+import { updateEnvironmentColors } from "../settings/_features/domain-rules/update-environment-colors.trpc.mutation";
 import { updateFeedbacksColumn } from "../inbox/_features/kanban/update-feedbacks-column.trpc.mutation";
 import { getProjects } from "./get-projects.trpc.query";
 
@@ -59,6 +65,7 @@ export const projectsRouter = router({
   update: updateProject,
   delete: deleteProject,
   regenerateApiKey,
+  updateEnvironmentColors,
   reviewer: router({
     list: getReviewers,
     create: createReviewer,
@@ -112,6 +119,13 @@ export const projectsRouter = router({
     update: updateFeedbackColumn,
     updatePosition: updateFeedbackColumnPosition,
     delete: deleteFeedbackColumn,
+  }),
+  domainRules: router({
+    list: getDomainRules,
+    create: createDomainRule,
+    update: updateDomainRule,
+    updatePosition: updateDomainRulePosition,
+    delete: deleteDomainRule,
   }),
   slack: router({
     getLink: getProjectSlackLink,
