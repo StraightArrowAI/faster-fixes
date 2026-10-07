@@ -28,6 +28,12 @@ type FeedbackProviderProps = {
   // Capture a Diagnostic Trail (console + network) with each feedback. Code-managed,
   // not a dashboard setting; set false to opt a site out of capture entirely.
   captureDiagnostics?: boolean;
+  /**
+   * Tags attached to every feedback submitted from this page, e.g.
+   * `{ env: "staging" }`. Tags derived from the project's domain rules
+   * override these on conflict.
+   */
+  tags?: Record<string, string>;
   children: React.ReactNode;
 };
 
@@ -40,6 +46,7 @@ export function FeedbackProvider({
   classNames,
   labels,
   captureDiagnostics = true,
+  tags,
   children,
 }: FeedbackProviderProps) {
   const [reviewerToken, setReviewerToken] = useState<string | null>(null);
@@ -50,9 +57,17 @@ export function FeedbackProvider({
   // either a `proj_` Project ID or a legacy `ff_` key from the same header.
   const identifier = projectId ?? apiKey ?? "";
 
+  // Keyed by content: an inline `tags={{ env }}` literal is a new object every
+  // render, and recreating the client would refetch the widget config each time.
+  const tagsKey = tags ? JSON.stringify(tags) : "";
   const client = useMemo(
-    () => new FasterFixesClient({ apiKey: identifier, apiOrigin }),
-    [identifier, apiOrigin],
+    () =>
+      new FasterFixesClient({
+        apiKey: identifier,
+        apiOrigin,
+        tags: tagsKey ? (JSON.parse(tagsKey) as Record<string, string>) : undefined,
+      }),
+    [identifier, apiOrigin, tagsKey],
   );
 
   useEffect(() => {

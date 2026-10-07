@@ -112,6 +112,9 @@ export type CreateFeedbackData = {
   viewportHeight?: number;
   metadata?: Record<string, unknown>;
   diagnosticTrail?: DiagnosticTrail;
+  /** Merged over the client-level `tags`. Tags derived from the project's
+   *  domain rules override both on conflict. */
+  tags?: Record<string, string>;
 };
 
 export type UpdateFeedbackData = {

@@ -4,16 +4,16 @@ import {
   compileHostPattern,
   matchCompiledPattern,
 } from "./compile-host-pattern";
-import type { FeedbackTags } from "./feedback-tags.schema";
+import type { FeedbackTagsInput } from "./feedback-tags.schema";
 
 export type DomainRuleInput = {
   pattern: string;
-  fixedTags: FeedbackTags;
+  fixedTags: FeedbackTagsInput;
 };
 
 export type HostMatch =
   | { allowed: false }
-  | { allowed: true; ruleTags: FeedbackTags };
+  | { allowed: true; ruleTags: FeedbackTagsInput };
 
 // Loopback is always allowed so developers can try the widget before deploying;
 // only code on the developer's machine can produce these origins.

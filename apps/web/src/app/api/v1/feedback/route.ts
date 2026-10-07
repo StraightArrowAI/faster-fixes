@@ -1,8 +1,10 @@
 import { checkRateLimit } from "@/server/api/check-rate-limit";
 import { resolveProject } from "@/server/api/resolve-project";
-import { validateOrigin } from "@/server/api/validate-origin";
+import { resolveRequestOrigin } from "@/server/api/resolve-request-origin";
 import { validateReviewer } from "@/server/api/validate-reviewer";
 import { checkResourceLimit } from "@/server/auth/subscription";
+import { sanitizeAppTags } from "@/server/domain-rules/feedback-tags.schema";
+import { mergeFeedbackTags } from "@/server/domain-rules/merge-feedback-tags";
 import {
   ALLOWED_SCREENSHOT_TYPES,
   effectiveMaxScreenshotBytes,
@@ -50,6 +52,7 @@ const CreateFeedbackSchema = z.object({
   viewportHeight: z.number().int().optional(),
   metadata: z.record(z.string(), z.any()).optional(),
   diagnosticTrail: DiagnosticTrailSchema.optional(),
+  tags: z.unknown().optional(),
 });
 
 // POST /api/v1/feedback — submit new feedback (multipart)
@@ -65,14 +68,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  if (!validateOrigin(req.headers, project.domain)) {
+  const originMatch = resolveRequestOrigin(req.headers, project);
+  if (!originMatch.allowed) {
     return NextResponse.json({ error: "Origin not allowed" }, { status: 403 });
   }
 
   const reviewerToken = req.headers.get("x-reviewer-token");
   const reviewer = await validateReviewer(reviewerToken, project.id);
   if (!reviewer) {
-    return NextResponse.json({ error: "Invalid reviewer token" }, { status: 403 });
+    return NextResponse.json(
+      { error: "Invalid reviewer token" },
+      { status: 403 },
+    );
   }
 
   const { allowed } = await checkRateLimit(project.id, "submit");
@@ -233,6 +240,7 @@ export async function POST(req: NextRequest) {
       viewportHeight: data.viewportHeight,
       metadata: data.metadata,
       diagnosticTrail: data.diagnosticTrail,
+      tags: mergeFeedbackTags(sanitizeAppTags(data.tags), originMatch.ruleTags),
       screenshotId,
     },
     include: {
@@ -281,14 +289,17 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  if (!validateOrigin(req.headers, project.domain)) {
+  if (!resolveRequestOrigin(req.headers, project).allowed) {
     return NextResponse.json({ error: "Origin not allowed" }, { status: 403 });
   }
 
   const reviewerToken = req.headers.get("x-reviewer-token");
   const reviewer = await validateReviewer(reviewerToken, project.id);
   if (!reviewer) {
-    return NextResponse.json({ error: "Invalid reviewer token" }, { status: 403 });
+    return NextResponse.json(
+      { error: "Invalid reviewer token" },
+      { status: 403 },
+    );
   }
 
   const { allowed } = await checkRateLimit(project.id, "read");

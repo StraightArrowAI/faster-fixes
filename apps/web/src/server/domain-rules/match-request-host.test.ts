@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { getRequestHost, matchRequestHost } from "./match-request-host";
+import {
+  type DomainRuleInput,
+  getRequestHost,
+  matchRequestHost,
+} from "./match-request-host";
 
-const rules = [
+const rules: DomainRuleInput[] = [
   { pattern: "{account}.rms.{env}.straightarrow.ai", fixedTags: {} },
   { pattern: "rms.{env}.straightarrow.ai", fixedTags: {} },
   { pattern: "straightarrow-rms-*.vercel.app", fixedTags: { env: "preview" } },
@@ -49,7 +53,7 @@ describe("matchRequestHost", () => {
   });
 
   it("respects rule order", () => {
-    const ordered = [
+    const ordered: DomainRuleInput[] = [
       {
         pattern: "rms.prod.straightarrow.ai",
         fixedTags: { env: "production" },

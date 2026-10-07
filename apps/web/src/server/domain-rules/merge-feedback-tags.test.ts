@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { FeedbackTagsSchema } from "./feedback-tags.schema";
+import { FeedbackTagsSchema, sanitizeAppTags } from "./feedback-tags.schema";
 import { mergeFeedbackTags } from "./merge-feedback-tags";
 
 describe("mergeFeedbackTags", () => {
@@ -33,4 +33,32 @@ describe("FeedbackTagsSchema", () => {
   ])("rejects %j", (tags) => {
     expect(FeedbackTagsSchema.safeParse(tags).success).toBe(false);
   });
+});
+
+describe("sanitizeAppTags", () => {
+  it("keeps valid entries and drops invalid ones", () => {
+    expect(
+      sanitizeAppTags({
+        env: " dev ",
+        Bad: "x",
+        empty: "",
+        n: 5,
+        account: "acme",
+      }),
+    ).toEqual({ env: "dev", account: "acme" });
+  });
+
+  it("caps at 10 entries", () => {
+    const many = Object.fromEntries(
+      Array.from({ length: 15 }, (_, i) => [`k${i}`, "v"]),
+    );
+    expect(Object.keys(sanitizeAppTags(many))).toHaveLength(10);
+  });
+
+  it.each([null, undefined, "env=dev", ["dev"], 42])(
+    "returns {} for %j",
+    (value) => {
+      expect(sanitizeAppTags(value)).toEqual({});
+    },
+  );
 });

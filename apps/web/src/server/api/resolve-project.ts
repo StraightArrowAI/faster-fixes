@@ -1,5 +1,15 @@
 import { prisma } from "@workspace/db";
+import type { Prisma } from "@workspace/db/generated/prisma/client";
 import crypto from "crypto";
+
+// Domain rules ride along so origin checks need no second query per request.
+const PROJECT_INCLUDE = {
+  widgetConfig: true,
+  domainRules: {
+    orderBy: { position: "asc" },
+    select: { pattern: true, fixedTags: true },
+  },
+} satisfies Prisma.ProjectInclude;
 
 /**
  * Resolves a Project from the identifier in the X-API-Key header.
@@ -18,7 +28,7 @@ export async function resolveProject(token: string | null) {
   if (token.startsWith("proj_")) {
     return prisma.project.findFirst({
       where: { publicId: token },
-      include: { widgetConfig: true },
+      include: PROJECT_INCLUDE,
     });
   }
 
@@ -26,7 +36,7 @@ export async function resolveProject(token: string | null) {
   const hash = crypto.createHash("sha256").update(token).digest("hex");
   const project = await prisma.project.findFirst({
     where: { apiKeyHash: hash },
-    include: { widgetConfig: true },
+    include: PROJECT_INCLUDE,
   });
   if (project) {
     console.warn(

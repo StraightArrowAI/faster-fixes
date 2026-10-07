@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.0.8
+
+### Added
+- `tags` option on `ClientOptions` and optional `tags` field on `CreateFeedbackData`. Tags are sent with each submitted feedback; tags derived from the project's domain rules override them on conflict.
+
 ## 0.0.7
 
 ### Added

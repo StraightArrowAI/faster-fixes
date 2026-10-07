@@ -48,6 +48,7 @@ Get your Project ID in [Project Settings](https://faster-fixes.com/settings).
 | `position` | `WidgetPosition` | No | Floating button placement. Defaults to `bottom-right` |
 | `classNames` | `object` | No | CSS class overrides for widget elements |
 | `labels` | `object` | No | Custom text labels for the widget UI |
+| `tags` | `Record<string, string>` | No | Tags attached to each submitted feedback. Requires version 0.0.11 or later. |
 
 ## Color
 
@@ -73,6 +74,16 @@ The `position` prop controls where the floating button appears. Default: `bottom
 | `middle-left` | Middle of the left edge |
 
 The `WidgetPosition` type is exported from the `@fasterfixes/core` package.
+
+## Tags
+
+The `tags` prop attaches key-value pairs to every feedback submitted from the page. Keys use lowercase letters, digits, and underscores; values are 1–64 characters; up to 10 tags.
+
+```tsx
+<FeedbackProvider projectId="proj_your_project_id" tags={{ env: "staging" }}>
+```
+
+The `env` tag is shown as the feedback's environment on the board. Tags derived from the project's domain rules override these on conflict.
 
 ## Dashboard toggle
 

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.0.11
+
+### Added
+- `tags` prop on `FeedbackProvider`, attached to each submitted feedback (e.g. `tags={{ env: "staging" }}`). Tags derived from the project's domain rules override these on conflict. Requires `@fasterfixes/core` 0.0.8+.
+
 ## 0.0.8
 
 ### Added

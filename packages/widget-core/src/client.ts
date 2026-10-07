@@ -12,14 +12,21 @@ import { DEFAULT_API_ORIGIN } from "./constants.js";
 export type ClientOptions = {
   apiKey: string;
   apiOrigin?: string;
+  /**
+   * Tags attached to every feedback this client submits (e.g. `{ env: "dev" }`).
+   * Tags derived from the project's domain rules override these on conflict.
+   */
+  tags?: Record<string, string>;
 };
 
 export class FasterFixesClient implements FeedbackClient {
   private apiKey: string;
   private apiOrigin: string;
+  private tags: Record<string, string> | undefined;
 
   constructor(options: ClientOptions) {
     this.apiKey = options.apiKey;
+    this.tags = options.tags;
     this.apiOrigin = (options.apiOrigin ?? DEFAULT_API_ORIGIN).replace(
       /\/$/,
       "",
@@ -77,7 +84,9 @@ export class FasterFixesClient implements FeedbackClient {
     screenshot?: Blob,
   ): Promise<CreateFeedbackResponse> {
     const formData = new FormData();
-    formData.append("data", JSON.stringify(data));
+    const tags =
+      this.tags || data.tags ? { ...this.tags, ...data.tags } : undefined;
+    formData.append("data", JSON.stringify({ ...data, tags }));
     if (screenshot) {
       formData.append("screenshot", screenshot, "screenshot.png");
     }

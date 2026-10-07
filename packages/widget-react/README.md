@@ -72,6 +72,7 @@ The color is applied as a `--ff-accent` CSS custom property on the widget root. 
 | `position`   | `WidgetPosition`      | No       | Floating button position (default: `bottom-right`)               |
 | `classNames` | `Partial<ClassNames>` | No       | CSS class overrides for widget elements                          |
 | `labels`     | `Partial<Labels>`     | No       | Custom UI text labels                                            |
+| `tags`       | `Record<string, string>` | No    | Tags attached to each feedback, e.g. `{ env: "staging" }`. Domain-rule tags override these on conflict. |
 
 ### `useFeedback` hook
 

@@ -274,9 +274,10 @@ function ComboboxChip({
 
 function ComboboxChipsInput({
   className,
-  children,
   ...props
 }: ComboboxPrimitive.Input.Props) {
+  // An <input> cannot render children; drop them rather than forward them.
+  delete props.children
   return (
     <ComboboxPrimitive.Input
       data-slot="combobox-chip-input"

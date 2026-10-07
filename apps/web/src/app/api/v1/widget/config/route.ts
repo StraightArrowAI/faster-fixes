@@ -1,6 +1,6 @@
 import { checkRateLimit } from "@/server/api/check-rate-limit";
 import { resolveProject } from "@/server/api/resolve-project";
-import { validateOrigin } from "@/server/api/validate-origin";
+import { resolveRequestOrigin } from "@/server/api/resolve-request-origin";
 import { resolveOrganizationPlan } from "@/server/auth/subscription/resolve-organization-plan";
 import {
   ALLOWED_RECORDING_TYPES,
@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  if (!validateOrigin(req.headers, project.domain)) {
+  if (!resolveRequestOrigin(req.headers, project).allowed) {
     return NextResponse.json({ error: "Origin not allowed" }, { status: 403 });
   }
 

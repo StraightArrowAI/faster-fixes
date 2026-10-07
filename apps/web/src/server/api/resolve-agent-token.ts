@@ -25,7 +25,10 @@ export async function resolveAgentToken(authHeader: string | null) {
     where: { tokenHash: computedHash, isActive: true, revokedAt: null },
     include: {
       organization: {
-        select: { id: true, projects: { select: { id: true, publicId: true } } },
+        select: {
+          id: true,
+          projects: { select: { id: true, publicId: true } },
+        },
       },
     },
   });

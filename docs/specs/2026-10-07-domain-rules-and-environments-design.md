@@ -90,8 +90,9 @@ Applied on `POST /api/v1/feedback` only, later steps overriding earlier ones:
 
 The host is browser-set and harder to forge than a prop, hence rule tags win.
 
-App-supplied tag validation (`CreateFeedbackSchema`): keys `[a-z][a-z0-9_]{0,31}`,
-values trimmed, 1–64 chars, at most 10 entries. Invalid → 400. Fixed tags on a rule use
+App-supplied tags (`sanitizeAppTags`): keys `[a-z][a-z0-9_]{0,31}`, values trimmed,
+1–64 chars, at most 10 entries. Invalid entries are dropped, never rejected: an empty
+env var in the host app must not cost a Reviewer their report. Fixed tags on a rule use
 the same key/value rules.
 
 Example rule set:
