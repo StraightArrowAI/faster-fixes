@@ -1,6 +1,6 @@
 # The widget identifies its Project by a public ID, secured by allowed origins + reviewer token — not a secret API key
 
-- **Status**: Accepted
+- **Status**: Accepted; the "Allowed origins" section is superseded by ADR-0012
 - **Date**: 2026-05-30
 
 The widget previously embedded a per-Project `apiKey` (`ff_` + 256-bit random), stored SHA-256-hashed at rest with only the last 4 chars shown and a "regenerate" flow — i.e. treated as a secret. But the key ships in the customer's client bundle (e.g. `layout.tsx` reads `NEXT_PUBLIC_FF_API_KEY`), so it was never actually confidential. We are replacing it: the widget embeds the public `publicId` (`proj_` + 96-bit random), and a request is authorized by (1) the browser-set `Origin` matching the Project's registered **domain or a subdomain of it**, and (2) a per-**Reviewer token**. Genuine secrets remain only on the agent/MCP surface (`ff_agent_` tokens).
