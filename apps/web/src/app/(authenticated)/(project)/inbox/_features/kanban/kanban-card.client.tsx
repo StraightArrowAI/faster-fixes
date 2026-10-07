@@ -12,12 +12,13 @@ import { resolveS3Url } from "@/server/storage/resolve-s3-url";
 import { cn } from "@workspace/ui/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import { GripVertical } from "lucide-react";
-import type { GetFeedbackOutput } from "../get-feedback.trpc.query";
-
-type FeedbackItem = GetFeedbackOutput[number];
+import type { EnvironmentColorsInput } from "@/app/(authenticated)/(project)/_features/environment/environment-color.schema";
+import { EnvironmentBadge } from "@/app/(authenticated)/(project)/_features/environment/environment-badge";
+import type { FeedbackItem } from "../get-feedback.trpc.query";
 
 type KanbanCardProps = {
   feedback: FeedbackItem;
+  environmentColors: EnvironmentColorsInput;
   isSelected: boolean;
   selectionMode: boolean;
   onToggleSelect: (id: string) => void;
@@ -35,6 +36,7 @@ function formatPageUrl(url: string) {
 
 type KanbanCardViewProps = {
   feedback: FeedbackItem;
+  environmentColors: EnvironmentColorsInput;
   isSelected: boolean;
   selectionMode: boolean;
   isOverlay?: boolean;
@@ -47,6 +49,7 @@ type KanbanCardViewProps = {
 // Pure presentational card. Used as draggable source and inside DragOverlay.
 function KanbanCardView({
   feedback,
+  environmentColors,
   isSelected,
   selectionMode,
   isOverlay,
@@ -55,6 +58,8 @@ function KanbanCardView({
   onToggleSelect,
   onSelect,
 }: KanbanCardViewProps) {
+  const env = feedback.tags.env;
+
   return (
     <div
       className={cn(
@@ -83,9 +88,21 @@ function KanbanCardView({
       <div className="min-w-0 flex-1">
         <p className="line-clamp-3 text-sm leading-snug">{feedback.comment}</p>
 
-        <p className="text-muted-foreground mt-1.5 truncate text-xs">
-          {formatPageUrl(feedback.pageUrl)}
-        </p>
+        {/* Both items are min-w-0 so a long host or env name truncates instead
+            of widening the lane. The badge is forced to block because the
+            inline-flex Badge base clips text without an ellipsis. */}
+        <div className="mt-1.5 flex min-w-0 items-center gap-1.5">
+          <p className="text-muted-foreground min-w-0 truncate text-xs">
+            {formatPageUrl(feedback.pageUrl)}
+          </p>
+          {env && (
+            <EnvironmentBadge
+              environment={env}
+              color={environmentColors[env]}
+              className="block min-w-0 shrink"
+            />
+          )}
+        </div>
 
         <div className="mt-2 flex items-center gap-2">
           {feedback.assignee ? (
@@ -129,6 +146,7 @@ function KanbanCardView({
 
 export function KanbanCard({
   feedback,
+  environmentColors,
   isSelected,
   selectionMode,
   onToggleSelect,
@@ -153,6 +171,7 @@ export function KanbanCard({
     <div ref={setNodeRef}>
       <KanbanCardView
         feedback={feedback}
+        environmentColors={environmentColors}
         isSelected={isSelected}
         selectionMode={selectionMode}
         isDragging={isDragging}
@@ -166,18 +185,21 @@ export function KanbanCard({
 
 type KanbanCardOverlayProps = {
   feedback: FeedbackItem;
+  environmentColors: EnvironmentColorsInput;
   isSelected: boolean;
   selectionMode: boolean;
 };
 
 export function KanbanCardOverlay({
   feedback,
+  environmentColors,
   isSelected,
   selectionMode,
 }: KanbanCardOverlayProps) {
   return (
     <KanbanCardView
       feedback={feedback}
+      environmentColors={environmentColors}
       isSelected={isSelected}
       selectionMode={selectionMode}
       isOverlay

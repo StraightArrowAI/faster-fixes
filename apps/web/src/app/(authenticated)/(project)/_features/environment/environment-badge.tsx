@@ -1,11 +1,11 @@
 import { Badge } from "@workspace/ui/components/badge";
 import { cn } from "@workspace/ui/lib/utils";
 
-import type { EnvironmentColor } from "./environment-color.schema";
+import type { EnvironmentColorInput } from "./environment-color.schema";
 
 // User-assigned category colors, not UI semantics, so hardcoded palette classes
 // are allowed here; keep them inside this component (tailwind-css-conventions).
-const COLOR_CLASSES: Record<EnvironmentColor, string> = {
+const COLOR_CLASSES: Record<EnvironmentColorInput, string> = {
   gray: "bg-zinc-500/15 text-zinc-700 dark:text-zinc-300",
   red: "bg-red-500/15 text-red-700 dark:text-red-300",
   orange: "bg-orange-500/15 text-orange-700 dark:text-orange-300",
@@ -18,7 +18,7 @@ const COLOR_CLASSES: Record<EnvironmentColor, string> = {
 
 export type EnvironmentBadgeProps = {
   environment: string;
-  color?: EnvironmentColor;
+  color?: EnvironmentColorInput;
   className?: string;
 };
 

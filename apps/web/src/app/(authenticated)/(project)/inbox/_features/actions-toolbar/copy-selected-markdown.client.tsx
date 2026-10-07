@@ -5,7 +5,7 @@ import { CopyButton } from "@workspace/ui/components/copy-button";
 import { useMemo } from "react";
 import type { GetFeedbackOutput } from "../get-feedback.trpc.query";
 
-type FeedbackItem = GetFeedbackOutput[number];
+type FeedbackItem = GetFeedbackOutput["items"][number];
 
 type CopySelectedMarkdownProps = {
   items: FeedbackItem[];

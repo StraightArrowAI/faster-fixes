@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import type { GetFeedbackOutput } from "../get-feedback.trpc.query";
 
 type LinearIssueBadgeProps = {
-  issueLink: GetFeedbackOutput[number]["linearIssueLink"];
+  issueLink: GetFeedbackOutput["items"][number]["linearIssueLink"];
   feedbackId: string;
   hasLinearLink: boolean;
   projectId: string;

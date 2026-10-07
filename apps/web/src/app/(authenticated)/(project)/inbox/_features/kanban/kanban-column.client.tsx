@@ -4,10 +4,9 @@ import { useDroppable } from "@dnd-kit/core";
 import { Badge } from "@workspace/ui/components/badge";
 import { Checkbox } from "@workspace/ui/components/checkbox";
 import { cn } from "@workspace/ui/lib/utils";
-import type { GetFeedbackOutput } from "../get-feedback.trpc.query";
+import type { EnvironmentColorsInput } from "@/app/(authenticated)/(project)/_features/environment/environment-color.schema";
+import type { FeedbackItem } from "../get-feedback.trpc.query";
 import { KanbanCard } from "./kanban-card.client";
-
-type FeedbackItem = GetFeedbackOutput[number];
 
 type KanbanColumnHeaderProps = {
   id: string;
@@ -47,6 +46,7 @@ export function KanbanColumnHeader({
 type KanbanColumnBodyProps = {
   id: string;
   items: FeedbackItem[];
+  environmentColors: EnvironmentColorsInput;
   selectedIds: Set<string>;
   onToggleSelect: (id: string) => void;
   onSelectFeedback: (id: string) => void;
@@ -55,6 +55,7 @@ type KanbanColumnBodyProps = {
 export function KanbanColumnBody({
   id,
   items,
+  environmentColors,
   selectedIds,
   onToggleSelect,
   onSelectFeedback,
@@ -81,6 +82,7 @@ export function KanbanColumnBody({
           <KanbanCard
             key={feedback.id}
             feedback={feedback}
+            environmentColors={environmentColors}
             isSelected={selectedIds.has(feedback.id)}
             selectionMode={selectedIds.size > 0}
             onToggleSelect={onToggleSelect}

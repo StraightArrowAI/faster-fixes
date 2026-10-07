@@ -9,14 +9,14 @@ import {
   TabsTrigger,
 } from "@workspace/ui/components/tabs";
 import * as React from "react";
-import type { GetFeedbackOutput } from "../get-feedback.trpc.query";
+import type { EnvironmentColorsInput } from "@/app/(authenticated)/(project)/_features/environment/environment-color.schema";
+import type { FeedbackItem } from "../get-feedback.trpc.query";
 import { KanbanCard } from "./kanban-card.client";
-
-type FeedbackItem = GetFeedbackOutput[number];
 
 type KanbanMobileProps = {
   columns: readonly { id: string; title: string }[];
   grouped: Record<string, FeedbackItem[]>;
+  environmentColors: EnvironmentColorsInput;
   selectedIds: Set<string>;
   toolbar: React.ReactNode;
   onToggleSelect: (id: string) => void;
@@ -27,6 +27,7 @@ type KanbanMobileProps = {
 export function KanbanMobile({
   columns,
   grouped,
+  environmentColors,
   selectedIds,
   toolbar,
   onToggleSelect,
@@ -90,6 +91,7 @@ export function KanbanMobile({
                     <KanbanCard
                       key={item.id}
                       feedback={item}
+                      environmentColors={environmentColors}
                       isSelected={selectedIds.has(item.id)}
                       selectionMode={selectedIds.size > 0}
                       onToggleSelect={onToggleSelect}

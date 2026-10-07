@@ -5,7 +5,7 @@ import { GitHubIssueBadge } from "./github-issue-badge.client";
 import { JiraIssueBadge } from "./jira-issue-badge.client";
 import { LinearIssueBadge } from "./linear-issue-badge.client";
 
-type FeedbackItem = GetFeedbackOutput[number];
+type FeedbackItem = GetFeedbackOutput["items"][number];
 
 type TrackersSectionProps = {
   feedbackId: string;

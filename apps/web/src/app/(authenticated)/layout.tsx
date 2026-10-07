@@ -51,7 +51,12 @@ export default async function AuthenticatedLayout({ children }: LayoutParams) {
         <BreadcrumbProvider>
           <AuthenticatedSidebar />
 
-          <SidebarInset>
+          {/* min-w-0: the inset is a flex item of the sidebar wrapper, so by
+              default it can't shrink below its content's min-content width.
+              Wide content (the board's nowrap card URLs summed across lanes)
+              then widened the whole page instead of letting inner
+              overflow-x-auto containers scroll. */}
+          <SidebarInset className="min-w-0">
             <header className="flex h-12 shrink-0 items-center justify-between gap-2">
               <div className="flex w-full items-center justify-between px-4">
                 <div className="flex items-center gap-2">

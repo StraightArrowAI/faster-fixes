@@ -1,6 +1,7 @@
 "use client";
 
 import { useFeedbackMutations } from "@/app/(authenticated)/(project)/inbox/_features/use-feedback-mutations";
+import type { EnvironmentColorsInput } from "@/app/(authenticated)/(project)/_features/environment/environment-color.schema";
 import type { GetFeedbackColumnsOutput } from "@/app/(authenticated)/(project)/settings/_features/board-columns/get-feedback-columns.trpc.query";
 import {
   closestCorners,
@@ -13,20 +14,28 @@ import {
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
+import { cn } from "@workspace/ui/lib/utils";
 import * as React from "react";
 import { BulkActionToolbar } from "../actions-toolbar/bulk-action-toolbar.client";
-import type { GetFeedbackOutput } from "../get-feedback.trpc.query";
+import { matchesEnvironmentFilter } from "../filters/matches-environment-filter";
+import type { FeedbackItem } from "../get-feedback.trpc.query";
 import { getBoardColumnId } from "./get-board-column-id";
 import { KanbanCardOverlay } from "./kanban-card.client";
 import { KanbanColumnBody, KanbanColumnHeader } from "./kanban-column.client";
 import { KanbanMobile } from "./kanban-mobile.client";
 
-type FeedbackItem = GetFeedbackOutput[number];
+// Shared by the header and body rows, which are separate flex rows; any drift
+// between them misaligns headers from lanes. Zero basis splits space equally,
+// the min forces scrolling only once every lane is at 16rem, and the max keeps
+// lanes from stretching on very wide screens (the row stays left-aligned).
+const COLUMN_SIZE = "min-w-64 max-w-96 flex-[1_1_0]";
 
 type KanbanBoardProps = {
   feedback: FeedbackItem[];
   columns: GetFeedbackColumnsOutput;
+  environmentColors: EnvironmentColorsInput;
   pageUrlFilter: string | null;
+  envFilter: string | null;
   sort: string;
   onSelectFeedback: (id: string) => void;
 };
@@ -53,7 +62,9 @@ function sortFeedback(items: FeedbackItem[], sort: string): FeedbackItem[] {
 export function KanbanBoard({
   feedback,
   columns,
+  environmentColors,
   pageUrlFilter,
+  envFilter,
   sort,
   onSelectFeedback,
 }: KanbanBoardProps) {
@@ -69,14 +80,16 @@ export function KanbanBoard({
     useSensor(KeyboardSensor),
   );
 
-  // Filter out closed items and apply page URL filter
   const filtered = React.useMemo(() => {
     let items = feedback.filter((f) => f.status !== "closed");
     if (pageUrlFilter) {
       items = items.filter((f) => f.pageUrl === pageUrlFilter);
     }
+    if (envFilter) {
+      items = items.filter((f) => matchesEnvironmentFilter(f.tags, envFilter));
+    }
     return items;
-  }, [feedback, pageUrlFilter]);
+  }, [feedback, pageUrlFilter, envFilter]);
 
   const grouped = React.useMemo(() => {
     const map: Record<string, FeedbackItem[]> = Object.fromEntries(
@@ -183,6 +196,7 @@ export function KanbanBoard({
       <KanbanMobile
         columns={boardColumns}
         grouped={grouped}
+        environmentColors={environmentColors}
         selectedIds={selectedIds}
         toolbar={bulkToolbar}
         onToggleSelect={handleToggleSelect}
@@ -204,7 +218,7 @@ export function KanbanBoard({
         <div className="hidden flex-col gap-4 overflow-x-auto pb-2 lg:flex">
           <div className="flex gap-4">
             {boardColumns.map((col) => (
-              <div key={col.id} className="min-w-64 flex-1">
+              <div key={col.id} className={COLUMN_SIZE}>
                 <KanbanColumnHeader
                   id={col.id}
                   title={col.title}
@@ -218,10 +232,11 @@ export function KanbanBoard({
           </div>
           <div className="flex gap-4">
             {boardColumns.map((col) => (
-              <div key={col.id} className="flex min-w-64 flex-1">
+              <div key={col.id} className={cn("flex", COLUMN_SIZE)}>
                 <KanbanColumnBody
                   id={col.id}
                   items={grouped[col.id] ?? []}
+                  environmentColors={environmentColors}
                   selectedIds={selectedIds}
                   onToggleSelect={handleToggleSelect}
                   onSelectFeedback={onSelectFeedback}
@@ -236,6 +251,7 @@ export function KanbanBoard({
           {activeFeedback ? (
             <KanbanCardOverlay
               feedback={activeFeedback}
+              environmentColors={environmentColors}
               isSelected={selectedIds.has(activeFeedback.id)}
               selectionMode={selectedIds.size > 0}
             />

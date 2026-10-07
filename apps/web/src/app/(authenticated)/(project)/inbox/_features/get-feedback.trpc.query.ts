@@ -1,5 +1,7 @@
 "use server";
 
+import { parseEnvironmentColors } from "@/app/(authenticated)/(project)/_features/environment/environment-color.schema";
+import { parseFeedbackTags } from "./parse-feedback-tags";
 import { readRecordingDurationMs } from "@/server/feedback/recording-metadata";
 import { getSignedAssetUrl } from "@/server/storage/get-signed-asset-url";
 import { protectedProcedure } from "@/server/trpc/trpc";
@@ -79,7 +81,7 @@ export const getFeedback = protectedProcedure
       },
     });
 
-    return Promise.all(
+    const items = await Promise.all(
       feedback.map(async (f) => ({
         id: f.id,
         createdAt: f.createdAt,
@@ -113,11 +115,20 @@ export const getFeedback = protectedProcedure
         recordingUrl: f.recording ? await getSignedAssetUrl(f.recording) : null,
         recordingDurationMs: readRecordingDurationMs(f.recording?.metadata),
         metadata: f.metadata as Record<string, unknown> | null,
+        tags: parseFeedbackTags(f.tags),
         issueLink: f.issueLink,
         linearIssueLink: f.linearIssueLink,
         jiraIssueLink: f.jiraIssueLink,
       })),
     );
+
+    // Colors ride along with the list so cards can render env badges without
+    // a second round trip; they are project-wide, so sent once, not per item.
+    return {
+      items,
+      environmentColors: parseEnvironmentColors(project.environmentColors),
+    };
   });
 
 export type GetFeedbackOutput = inferProcedureOutput<typeof getFeedback>;
+export type FeedbackItem = GetFeedbackOutput["items"][number];

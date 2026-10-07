@@ -16,11 +16,15 @@ import {
   SelectValue,
 } from "@workspace/ui/components/select";
 import * as React from "react";
+import { EnvironmentFilter } from "./environment-filter.client";
 
 type FeedbackFiltersProps = {
   pageUrls: string[];
   selectedPageUrl: string | null;
   onPageUrlChange: (url: string | null) => void;
+  environments: string[];
+  selectedEnvironment: string | null;
+  onEnvironmentChange: (env: string | null) => void;
   sort: string;
   onSortChange: (sort: string) => void;
 };
@@ -38,6 +42,9 @@ export function FeedbackFilters({
   pageUrls,
   selectedPageUrl,
   onPageUrlChange,
+  environments,
+  selectedEnvironment,
+  onEnvironmentChange,
   sort,
   onSortChange,
 }: FeedbackFiltersProps) {
@@ -66,6 +73,12 @@ export function FeedbackFilters({
           </ComboboxList>
         </ComboboxContent>
       </Combobox>
+
+      <EnvironmentFilter
+        environments={environments}
+        selectedEnvironment={selectedEnvironment}
+        onEnvironmentChange={onEnvironmentChange}
+      />
 
       <Select value={sort} onValueChange={onSortChange}>
         <SelectTrigger className="w-full sm:w-[160px]">

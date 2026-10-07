@@ -9,7 +9,7 @@ import type { GetFeedbackOutput } from "../get-feedback.trpc.query";
 import { CopySelectedMarkdown } from "./copy-selected-markdown.client";
 
 type BulkActionToolbarProps = {
-  selectedItems: GetFeedbackOutput[number][];
+  selectedItems: GetFeedbackOutput["items"][number][];
   columns: GetFeedbackColumnsOutput;
   onMoveToColumn: (columnId: string) => void;
   onArchive: () => void;

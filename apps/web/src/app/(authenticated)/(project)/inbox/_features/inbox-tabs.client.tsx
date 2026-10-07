@@ -23,6 +23,7 @@ import { parseAsString, useQueryState } from "nuqs";
 import * as React from "react";
 import { ArchiveTab } from "./archive/archive-tab.client";
 import { FeedbackDetailPanel } from "./feedback-panel/feedback-detail-panel.client";
+import { EnvironmentFilter } from "./filters/environment-filter.client";
 import { FeedbackFilters } from "./filters/feedback-filters.client";
 import { KanbanBoard } from "./kanban/kanban-board.client";
 
@@ -36,6 +37,7 @@ export function InboxTabs() {
     parseAsString.withDefault("board"),
   );
   const [pageUrlFilter, setPageUrlFilter] = useQueryState("pageUrl");
+  const [envFilter, setEnvFilter] = useQueryState("env");
   const [sort, setSort] = useQueryState(
     "sort",
     parseAsString.withDefault("newest"),
@@ -57,6 +59,12 @@ export function InboxTabs() {
     }),
   );
 
+  const environmentsQuery = useQuery(
+    trpc.authenticated.projects.feedback.distinctEnvironments.queryOptions({
+      projectId,
+    }),
+  );
+
   const gitHubLinkQuery = useQuery(
     trpc.authenticated.projects.github.getLink.queryOptions({ projectId }),
   );
@@ -70,7 +78,7 @@ export function InboxTabs() {
   );
 
   const selectedFeedback = React.useMemo(
-    () => feedbackQuery.data?.find((f) => f.id === selectedFeedbackId) ?? null,
+    () => feedbackQuery.data?.items.find((f) => f.id === selectedFeedbackId) ?? null,
     [feedbackQuery.data, selectedFeedbackId],
   );
 
@@ -128,14 +136,26 @@ export function InboxTabs() {
               pageUrls={pageUrlsQuery.data ?? []}
               selectedPageUrl={pageUrlFilter}
               onPageUrlChange={setPageUrlFilter}
+              environments={environmentsQuery.data ?? []}
+              selectedEnvironment={envFilter}
+              onEnvironmentChange={setEnvFilter}
               sort={sort}
               onSortChange={setSort}
+            />
+          )}
+
+          {view === "archive" && (
+            <EnvironmentFilter
+              environments={environmentsQuery.data ?? []}
+              selectedEnvironment={envFilter}
+              onEnvironmentChange={setEnvFilter}
             />
           )}
         </div>
 
         <TabsContent value="board" className="mt-4">
           {matchQueryStatus(feedbackQuery, {
+            dataKey: "items",
             Loading: boardLoading,
             Errored: boardErrored,
             Empty: (
@@ -151,7 +171,7 @@ export function InboxTabs() {
                 </EmptyHeader>
               </Empty>
             ),
-            Success: ({ data: feedback }) =>
+            Success: ({ data: { items: feedback, environmentColors } }) =>
               matchQueryStatus(columnsQuery, {
                 Loading: boardLoading,
                 Errored: boardErrored,
@@ -162,7 +182,9 @@ export function InboxTabs() {
                   <KanbanBoard
                     feedback={feedback}
                     columns={columns}
+                    environmentColors={environmentColors}
                     pageUrlFilter={pageUrlFilter}
+                    envFilter={envFilter}
                     sort={sort}
                     onSelectFeedback={(id) => setSelectedFeedbackId(id)}
                   />
@@ -172,7 +194,7 @@ export function InboxTabs() {
         </TabsContent>
 
         <TabsContent value="archive" className="mt-4">
-          <ArchiveTab />
+          <ArchiveTab envFilter={envFilter} />
         </TabsContent>
       </Tabs>
 

@@ -11,7 +11,7 @@ import {
 import { format, formatDistanceToNow } from "date-fns";
 import { ExternalLink, ImageOff, VideoOff } from "lucide-react";
 import type { GetFeedbackColumnsOutput } from "@/app/(authenticated)/(project)/settings/_features/board-columns/get-feedback-columns.trpc.query";
-import type { GetFeedbackOutput } from "../get-feedback.trpc.query";
+import type { FeedbackItem } from "../get-feedback.trpc.query";
 import { AssigneeSelect } from "./assignee-select.client";
 import { CopyFeedbackMarkdown } from "./copy-feedback-markdown.client";
 import { RecordingPlayer } from "./recording-player.client";
@@ -19,8 +19,6 @@ import { ScreenshotDialog } from "./screenshot-dialog.client";
 import { StatusSelect } from "./status-select.client";
 import { TrackersSection } from "./trackers-section.client";
 import { ViewDiagnosticsDialog } from "./view-diagnostics-dialog.client";
-
-type FeedbackItem = GetFeedbackOutput[number];
 
 type FeedbackDetailPanelProps = {
   feedback: FeedbackItem | null;
@@ -60,6 +58,7 @@ export function FeedbackDetailPanel({
   if (!feedback) return null;
 
   const browserMeta = formatBrowserMeta(feedback);
+  const tagEntries = Object.entries(feedback.tags);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -180,6 +179,27 @@ export function FeedbackDetailPanel({
                 </>
               );
             })()}
+
+          {tagEntries.length > 0 && (
+            <>
+              <Separator />
+              <div>
+                <h4 className="text-muted-foreground mb-1 text-xs font-medium uppercase">
+                  Tags
+                </h4>
+                <dl className="flex flex-col gap-0.5 text-sm">
+                  {tagEntries.map(([key, value]) => (
+                    <div key={key} className="flex min-w-0 gap-1">
+                      <dt className="text-muted-foreground shrink-0 font-mono text-xs leading-5">
+                        {key}:
+                      </dt>
+                      <dd className="min-w-0 break-words">{value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
+            </>
+          )}
 
           {/* Browser Metadata */}
           {browserMeta && (

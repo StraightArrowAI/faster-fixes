@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import type { GetFeedbackOutput } from "../get-feedback.trpc.query";
 
 type JiraIssueBadgeProps = {
-  issueLink: GetFeedbackOutput[number]["jiraIssueLink"];
+  issueLink: GetFeedbackOutput["items"][number]["jiraIssueLink"];
   feedbackId: string;
   hasJiraLink: boolean;
   projectId: string;

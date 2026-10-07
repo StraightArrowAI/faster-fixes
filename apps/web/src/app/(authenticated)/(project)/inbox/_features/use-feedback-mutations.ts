@@ -1,4 +1,7 @@
-import { GetFeedbackOutput } from "@/app/(authenticated)/(project)/inbox/_features/get-feedback.trpc.query";
+import type {
+  FeedbackItem,
+  GetFeedbackOutput,
+} from "@/app/(authenticated)/(project)/inbox/_features/get-feedback.trpc.query";
 import { useActiveProject } from "@/app/_features/project/active-project-provider.client";
 import { useTRPC } from "@/lib/trpc/trpc-client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -6,11 +9,15 @@ import { toast } from "sonner";
 
 // Optimistic twin of updateFeedbackStatuses: a real status change drops the
 // card into the first column of its new category.
-function withStatus(
-  f: GetFeedbackOutput[number],
-  status: string,
-): GetFeedbackOutput[number] {
+function withStatus(f: FeedbackItem, status: string): FeedbackItem {
   return f.status === status ? f : { ...f, status, columnId: null };
+}
+
+function mapItems(
+  old: GetFeedbackOutput | undefined,
+  fn: (f: FeedbackItem) => FeedbackItem,
+): GetFeedbackOutput | undefined {
+  return old && { ...old, items: old.items.map(fn) };
 }
 
 export function useFeedbackMutations() {
@@ -35,7 +42,9 @@ export function useFeedbackMutations() {
         queryClient.setQueryData(
           feedbackQueryKey,
           (old: GetFeedbackOutput | undefined) =>
-            old?.map((f) => (f.id === feedbackId ? withStatus(f, status) : f)),
+            mapItems(old, (f) =>
+              f.id === feedbackId ? withStatus(f, status) : f,
+            ),
         );
 
         return { previous };
@@ -62,7 +71,7 @@ export function useFeedbackMutations() {
         queryClient.setQueryData(
           feedbackQueryKey,
           (old: GetFeedbackOutput | undefined) =>
-            old?.map((f) => (idSet.has(f.id) ? withStatus(f, status) : f)),
+            mapItems(old, (f) => (idSet.has(f.id) ? withStatus(f, status) : f)),
         );
 
         return { previous };
@@ -93,7 +102,7 @@ export function useFeedbackMutations() {
           queryClient.setQueryData(
             feedbackQueryKey,
             (old: GetFeedbackOutput | undefined) =>
-              old?.map((f) =>
+              mapItems(old, (f) =>
                 idSet.has(f.id)
                   ? { ...f, columnId, status: column.category }
                   : f,

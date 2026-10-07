@@ -1,6 +1,7 @@
 "use server";
 
 import { protectedProcedure } from "@/server/trpc/trpc";
+import type { inferProcedureOutput } from "@trpc/server";
 import z from "zod";
 
 import { requireProjectMember } from "../../../settings/_features/board-columns/require-project-member";
@@ -24,3 +25,7 @@ export const getDistinctEnvironments = protectedProcedure
 
     return rows.map((r) => r.env);
   });
+
+export type GetDistinctEnvironmentsOutput = inferProcedureOutput<
+  typeof getDistinctEnvironments
+>;

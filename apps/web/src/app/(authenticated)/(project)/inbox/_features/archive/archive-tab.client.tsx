@@ -1,5 +1,6 @@
 "use client";
 
+import { EnvironmentBadge } from "@/app/(authenticated)/(project)/_features/environment/environment-badge";
 import { useActiveProject } from "@/app/_features/project/active-project-provider.client";
 import { DataTable } from "@/app/_features/core/datatable/data-table";
 import { DataTableColumnHeader } from "@/app/_features/core/datatable/data-table-column-header";
@@ -27,12 +28,31 @@ import { Archive } from "lucide-react";
 
 type ArchivedItem = GetArchivedFeedbackOutput["items"][number];
 
-export function ArchiveTab() {
+function formatPageUrl(pageUrl: string) {
+  try {
+    const url = new URL(pageUrl);
+    return url.hostname + url.pathname.replace(/\/$/, "");
+  } catch {
+    return pageUrl;
+  }
+}
+
+type ArchiveTabProps = {
+  envFilter: string | null;
+};
+
+export function ArchiveTab({ envFilter }: ArchiveTabProps) {
   const { activeProject } = useActiveProject();
   const projectId = activeProject!.id;
   const trpc = useTRPC();
   const queryClient = useQueryClient();
   const [page, setPage] = React.useState(1);
+  // Reset during render (not in an effect) so the stale page is never fetched.
+  const [prevEnvFilter, setPrevEnvFilter] = React.useState(envFilter);
+  if (prevEnvFilter !== envFilter) {
+    setPrevEnvFilter(envFilter);
+    setPage(1);
+  }
   const [search, setSearch] = React.useState("");
   const [sorting, setSorting] = React.useState<Array<{ id: string; desc: boolean }>>([]);
 
@@ -45,6 +65,7 @@ export function ArchiveTab() {
       page,
       pageSize: 20,
       search: search || undefined,
+      env: envFilter ?? undefined,
       sortBy,
       sortOrder,
     }),
@@ -78,6 +99,8 @@ export function ArchiveTab() {
     }),
   );
 
+  const environmentColors = archiveQuery.data?.environmentColors;
+
   const columns: ColumnDef<ArchivedItem>[] = React.useMemo(
     () => [
       {
@@ -91,16 +114,21 @@ export function ArchiveTab() {
         accessorKey: "pageUrl",
         header: "Page URL",
         cell: ({ row }) => {
-          try {
-            const url = new URL(row.original.pageUrl);
-            return (
+          const env = row.original.tags.env;
+          return (
+            <div className="flex items-center gap-1.5">
               <span className="text-muted-foreground text-xs">
-                {url.hostname + url.pathname.replace(/\/$/, "")}
+                {formatPageUrl(row.original.pageUrl)}
               </span>
-            );
-          } catch {
-            return <span className="text-muted-foreground text-xs">{row.original.pageUrl}</span>;
-          }
+              {env && (
+                <EnvironmentBadge
+                  environment={env}
+                  color={environmentColors?.[env]}
+                  className="block"
+                />
+              )}
+            </div>
+          );
         },
       },
       {
@@ -155,7 +183,7 @@ export function ArchiveTab() {
         ),
       },
     ],
-    [hardDeleteMutation],
+    [hardDeleteMutation, environmentColors],
   );
 
   return matchQueryStatus(archiveQuery, {
