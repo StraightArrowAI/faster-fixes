@@ -1,4 +1,4 @@
-import { NO_ENVIRONMENT_FILTER } from "./feedback-filters.schema";
+import { NO_ENVIRONMENT_FILTER } from "./no-environment-filter";
 
 export function matchesEnvironmentFilter(
   tags: Record<string, string>,

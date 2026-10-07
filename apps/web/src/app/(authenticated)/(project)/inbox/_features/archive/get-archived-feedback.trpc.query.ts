@@ -7,7 +7,7 @@ import { protectedProcedure } from "@/server/trpc/trpc";
 import { inferProcedureOutput, TRPCError } from "@trpc/server";
 import z from "zod";
 
-import { NO_ENVIRONMENT_FILTER } from "../filters/feedback-filters.schema";
+import { NO_ENVIRONMENT_FILTER } from "../filters/no-environment-filter";
 import { parseFeedbackTags } from "../parse-feedback-tags";
 
 async function getEnvironmentWhere(

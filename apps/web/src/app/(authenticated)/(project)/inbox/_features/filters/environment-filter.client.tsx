@@ -8,7 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@workspace/ui/components/select";
-import { NO_ENVIRONMENT_FILTER } from "./feedback-filters.schema";
+import { NO_ENVIRONMENT_FILTER } from "./no-environment-filter";
 
 // Radix Select rejects an empty item value, so "all" needs its own sentinel;
 // it maps back to a null URL param so the default state keeps a clean URL.
