@@ -9,6 +9,7 @@ import { bulkUpdateFeedbackStatus } from "../inbox/_features/actions-toolbar/bul
 import { bulkHardDeleteFeedback } from "../inbox/_features/archive/bulk-hard-delete-feedback.trpc.mutation";
 import { getArchivedFeedback } from "../inbox/_features/archive/get-archived-feedback.trpc.query";
 import { hardDeleteFeedback } from "../inbox/_features/archive/hard-delete-feedback.trpc.mutation";
+import { getDistinctEnvironments } from "../inbox/_features/filters/get-distinct-environments.trpc.query";
 import { getDistinctPageUrls } from "../inbox/_features/filters/get-distinct-page-urls.trpc.query";
 import { getFeedbackDiagnostics } from "../inbox/_features/feedback-panel/get-feedback-diagnostics.trpc.query";
 import { getFeedback } from "../inbox/_features/get-feedback.trpc.query";
@@ -69,6 +70,7 @@ export const projectsRouter = router({
     list: getFeedback,
     listArchived: getArchivedFeedback,
     distinctPageUrls: getDistinctPageUrls,
+    distinctEnvironments: getDistinctEnvironments,
     getDiagnostics: getFeedbackDiagnostics,
     updateStatus: updateFeedbackStatus,
     updateAssignee: updateFeedbackAssignee,
