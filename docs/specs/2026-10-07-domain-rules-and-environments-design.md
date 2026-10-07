@@ -55,8 +55,9 @@ Validation (rejected on save, with a message):
 
 - Two adjacent wildcard tokens in one label (`{a}{b}`, `*{a}`).
 - A placeholder name used twice in one pattern.
-- The last two labels are not both pure literals (`*.com`, `{x}.vercel.app`). This
-  guarantees a registrable domain is always fixed.
+- The last two labels are not both pure literals (`*.com`, `rms.{x}.app`). This
+  fixes at least a domain and TLD; it cannot know public suffixes, so
+  `{x}.vercel.app` passes and gets the shared-hosting warning below.
 - Exception: the single literal label `localhost` is a valid pattern.
 - Invalid characters, empty labels, total length over 253.
 - A fixed tag key that is also a placeholder name in the same rule.
