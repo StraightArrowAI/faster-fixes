@@ -4,6 +4,8 @@ model Project {
   updatedAt DateTime @updatedAt
 
   name           String
+  // Mirrors the primary ProjectDomain's host for previously deployed code;
+  // ProjectDomain is the source of truth (ADR-0013). Dropped in a later deploy.
   domain         String @map("url")
   publicId       String @unique
   apiKeyHash     String
@@ -23,7 +25,8 @@ model Project {
   jiraLink        ProjectJiraLink?
   slackLink       ProjectSlackLink?
   feedbackColumns FeedbackColumn[]
-  domainRules     ProjectDomainRule[]
+  tagExtractors   ProjectTagExtractor[]
+  domains         ProjectDomain[]
 
   @@index([organizationId])
   @@index([publicId])
@@ -52,12 +55,19 @@ model Reviewer {
   project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   name     String
-  token    String  @unique
-  isActive Boolean @default(true)
+  email    String?
+  // sha256 of the raw token, used to validate requests. The column keeps its
+  // old name so previously deployed code reads the same data (ADR-0013).
+  tokenLookup     String  @unique @map("token")
+  // AES-256-GCM (REVIEWER_TOKEN_ENCRYPTION_KEY) so links can be rebuilt after
+  // creation. Null for reviewers created before encryption.
+  tokenCiphertext String?
+  isActive        Boolean @default(true)
 
-  // Page the share link opens; null means the main domain. Any allowed host
-  // works because the token is not bound to a domain.
+  // Superseded by domain selection (ADR-0013); unused, dropped in a later deploy.
   linkUrl String?
+
+  sends ReviewerLinkSend[]
 
   feedback Feedback[]
 
@@ -150,9 +160,9 @@ model FeedbackColumn {
   @@map("feedback_column")
 }
 
-// Extra allowed host pattern for a Project's widget (ADR-0012). The first rule by
-// position that matches the request host allows it and supplies the Feedback's tags.
-model ProjectDomainRule {
+// Ordered host pattern that derives tags for an already-allowed request
+// (ADR-0013); it never grants access. Table name predates the rename.
+model ProjectTagExtractor {
   id        String   @id @default(uuid())
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -167,4 +177,47 @@ model ProjectDomainRule {
   @@unique([projectId, pattern])
   @@index([projectId, position])
   @@map("project_domain_rule")
+}
+
+// A host the Project's widget may run on, and a link target for reviewers
+// (ADR-0013). Exactly one per Project is primary.
+model ProjectDomain {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  url               String
+  host              String
+  includeSubdomains Boolean @default(false)
+  environment       String?
+  isPrimary         Boolean @default(false)
+
+  sends ReviewerLinkSend[]
+
+  @@unique([projectId, host])
+  @@index([projectId])
+  @@map("project_domain")
+}
+
+// One row per domain per send; rows of one send share sendId.
+model ReviewerLinkSend {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+
+  sendId String
+
+  reviewerId      String
+  reviewer        Reviewer      @relation(fields: [reviewerId], references: [id], onDelete: Cascade)
+  projectDomainId String
+  projectDomain   ProjectDomain @relation(fields: [projectDomainId], references: [id], onDelete: Cascade)
+  projectId       String
+  sentById        String
+  message         String?
+
+  @@index([reviewerId])
+  @@index([projectId, createdAt])
+  @@map("reviewer_link_send")
 }

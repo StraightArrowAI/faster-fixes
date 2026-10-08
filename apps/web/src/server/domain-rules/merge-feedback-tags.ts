@@ -1,10 +1,10 @@
 import type { FeedbackTagsInput } from "./feedback-tags.schema";
 
-// Rule tags come from the browser-set Origin and so outrank whatever the page's
-// script passed in the widget `tags` prop (ADR-0012).
+// Host-derived tags come from the browser-set Origin and so outrank what the
+// page's script passed in the widget `tags` prop (ADR-0012, ADR-0013).
 export function mergeFeedbackTags(
   appTags: FeedbackTagsInput | undefined,
-  ruleTags: FeedbackTagsInput,
+  hostTags: FeedbackTagsInput,
 ): FeedbackTagsInput {
-  return { ...appTags, ...ruleTags };
+  return { ...appTags, ...hostTags };
 }

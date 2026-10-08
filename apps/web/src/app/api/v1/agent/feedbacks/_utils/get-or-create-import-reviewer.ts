@@ -4,7 +4,7 @@ import crypto from "crypto";
 export const DEFAULT_IMPORT_REVIEWER_NAME = "Imported feedback";
 
 /**
- * Imported reviewers never authenticate via the widget, but `reviewer.token`
+ * Imported reviewers never authenticate via the widget, but `reviewer.tokenLookup`
  * is unique + required — generate an unguessable hashed value to fill it.
  */
 export async function getOrCreateImportReviewer(
@@ -27,6 +27,6 @@ export async function getOrCreateImportReviewer(
   const rawToken = `imported_${crypto.randomUUID()}`;
   const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
   return prisma.reviewer.create({
-    data: { projectId, name, token: tokenHash, isActive: true },
+    data: { projectId, name, tokenLookup: tokenHash, isActive: true },
   });
 }

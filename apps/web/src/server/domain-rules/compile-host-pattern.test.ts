@@ -23,6 +23,9 @@ describe("compileHostPattern", () => {
     "{branch}-{env}.vercel.app",
     "*.straightarrow.ai",
     "localhost",
+    // Extractors never grant access (ADR-0013), so broad patterns are fine.
+    "*.com",
+    "rms.{env}",
     "{x}.vercel.app",
     "  RMS.{env}.StraightArrow.AI  ",
   ])("accepts %s", (pattern) => {
@@ -31,10 +34,6 @@ describe("compileHostPattern", () => {
 
   it.each([
     ["", "empty"],
-    ["*.com", "last two labels"],
-    ["rms.{x}.app", "last two labels"],
-    ["rms.{env}", "last two labels"],
-    ["straightarrow", "last two labels"],
     ["a..straightarrow.ai", "empty label"],
     ["{a}{b}.straightarrow.ai", "adjacent"],
     ["*{a}.straightarrow.ai", "adjacent"],

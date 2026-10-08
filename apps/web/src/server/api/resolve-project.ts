@@ -2,10 +2,13 @@ import { prisma } from "@workspace/db";
 import type { Prisma } from "@workspace/db/generated/prisma/client";
 import crypto from "crypto";
 
-// Domain rules ride along so origin checks need no second query per request.
+// Domains and extractors ride along so origin checks need no second query.
 const PROJECT_INCLUDE = {
   widgetConfig: true,
-  domainRules: {
+  domains: {
+    select: { id: true, host: true, includeSubdomains: true, environment: true },
+  },
+  tagExtractors: {
     orderBy: { position: "asc" },
     select: { pattern: true, fixedTags: true },
   },

@@ -4,37 +4,42 @@ import {
 } from "@/server/domain-rules/feedback-tags.schema";
 import {
   getRequestHost,
-  matchRequestHost,
-  type HostMatch,
+  type HostResolution,
+  type ProjectDomainInput,
+  resolveHost,
 } from "@/server/domain-rules/match-request-host";
 
 type ProjectOriginInput = {
   domain: string;
-  domainRules: { pattern: string; fixedTags: unknown }[];
+  domains: ProjectDomainInput[];
+  tagExtractors: { pattern: string; fixedTags: unknown }[];
 };
 
 function parseFixedTags(value: unknown): FeedbackTagsInput {
   // fixedTags is validated on save; a malformed row only loses its tags rather
-  // than rejecting requests the rule is meant to allow.
+  // than rejecting requests the domain is meant to allow.
   const parsed = FeedbackTagsSchema.safeParse(value);
   return parsed.success ? parsed.data : {};
 }
 
 /**
  * Decides whether a widget request may proceed for a Project, and which tags
- * its host contributes. Domain rules are tried in order first, then the main
- * domain (and its subdomains) and loopback. See ADR-0012.
+ * its host contributes. Domains decide access; tag extractors only add tags
+ * (ADR-0013).
  */
 export function resolveRequestOrigin(
   headers: Headers,
   project: ProjectOriginInput,
-): HostMatch {
+): HostResolution {
   const host = getRequestHost(headers);
   if (!host) return { allowed: false };
 
-  const rules = project.domainRules.map((rule) => ({
-    pattern: rule.pattern,
-    fixedTags: parseFixedTags(rule.fixedTags),
-  }));
-  return matchRequestHost(host, rules, project.domain);
+  return resolveHost(host, {
+    domains: project.domains,
+    extractors: project.tagExtractors.map((e) => ({
+      pattern: e.pattern,
+      fixedTags: parseFixedTags(e.fixedTags),
+    })),
+    fallbackDomain: project.domain,
+  });
 }

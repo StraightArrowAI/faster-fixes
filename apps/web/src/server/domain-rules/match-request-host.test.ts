@@ -1,15 +1,43 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  type DomainRuleInput,
+  extractHostTags,
   getRequestHost,
-  matchRequestHost,
+  matchProjectDomain,
+  type ProjectDomainInput,
+  resolveHost,
+  type TagExtractorInput,
 } from "./match-request-host";
 
-const rules: DomainRuleInput[] = [
+const domains: ProjectDomainInput[] = [
+  {
+    id: "primary",
+    host: "straightarrow.ai",
+    includeSubdomains: true,
+    environment: "prod",
+  },
+  {
+    id: "dev",
+    host: "rms.dev.straightarrow.ai",
+    includeSubdomains: true,
+    environment: "dev",
+  },
+  {
+    id: "exact",
+    host: "rms.straightarrow.ai",
+    includeSubdomains: false,
+    environment: null,
+  },
+  {
+    id: "preview",
+    host: "straightarrow-rms.vercel.app",
+    includeSubdomains: false,
+    environment: "preview",
+  },
+];
+
+const extractors: TagExtractorInput[] = [
   { pattern: "{account}.rms.{env}.straightarrow.ai", fixedTags: {} },
-  { pattern: "rms.{env}.straightarrow.ai", fixedTags: {} },
-  { pattern: "straightarrow-rms-*.vercel.app", fixedTags: { env: "preview" } },
   { pattern: "localhost", fixedTags: { env: "local" } },
 ];
 
@@ -22,8 +50,9 @@ describe("getRequestHost", () => {
   });
 
   it("falls back to Referer", () => {
-    const headers = new Headers({ referer: "https://www.acme.com/page?x=1" });
-    expect(getRequestHost(headers)).toBe("www.acme.com");
+    expect(
+      getRequestHost(new Headers({ referer: "https://www.acme.com/p?x=1" })),
+    ).toBe("www.acme.com");
   });
 
   it("returns null without a usable header", () => {
@@ -32,116 +61,128 @@ describe("getRequestHost", () => {
   });
 });
 
-describe("matchRequestHost", () => {
-  it("uses the first matching rule", () => {
-    expect(
-      matchRequestHost(
-        "acme.rms.dev.straightarrow.ai",
-        rules,
-        "straightarrow.ai",
-      ),
-    ).toEqual({
-      allowed: true,
-      ruleTags: { account: "acme", env: "dev" },
-    });
-    expect(
-      matchRequestHost("rms.prod.straightarrow.ai", rules, "straightarrow.ai"),
-    ).toEqual({
-      allowed: true,
-      ruleTags: { env: "prod" },
-    });
+describe("matchProjectDomain", () => {
+  it("prefers an exact host over a subdomain match", () => {
+    expect(matchProjectDomain("rms.dev.straightarrow.ai", domains)?.id).toBe(
+      "dev",
+    );
+    expect(matchProjectDomain("rms.straightarrow.ai", domains)?.id).toBe(
+      "exact",
+    );
   });
 
-  it("respects rule order", () => {
-    const ordered: DomainRuleInput[] = [
-      {
-        pattern: "rms.prod.straightarrow.ai",
-        fixedTags: { env: "production" },
-      },
-      { pattern: "rms.{env}.straightarrow.ai", fixedTags: {} },
-    ];
+  it("prefers the longest subdomain match", () => {
     expect(
-      matchRequestHost("rms.prod.straightarrow.ai", ordered, "x.com"),
-    ).toEqual({
-      allowed: true,
-      ruleTags: { env: "production" },
-    });
+      matchProjectDomain("acme.rms.dev.straightarrow.ai", domains)?.id,
+    ).toBe("dev");
+    expect(matchProjectDomain("app.straightarrow.ai", domains)?.id).toBe(
+      "primary",
+    );
   });
 
-  it("lets captured tags override fixed tags", () => {
-    const r = [
+  it("does not extend exact-only entries to subdomains", () => {
+    expect(
+      matchProjectDomain("x.straightarrow-rms.vercel.app", domains),
+    ).toBeNull();
+  });
+
+  it("rejects look-alikes", () => {
+    expect(matchProjectDomain("evilstraightarrow.ai", domains)).toBeNull();
+    expect(matchProjectDomain("straightarrow.ai.evil.com", domains)).toBeNull();
+  });
+});
+
+describe("extractHostTags", () => {
+  it("uses the first matching extractor, captures over fixed tags", () => {
+    const ex: TagExtractorInput[] = [
       {
         pattern: "rms.{env}.straightarrow.ai",
         fixedTags: { env: "x", team: "a" },
       },
+      { pattern: "rms.*.straightarrow.ai", fixedTags: { team: "b" } },
     ];
-    expect(matchRequestHost("rms.dev.straightarrow.ai", r, "x.com")).toEqual({
-      allowed: true,
-      ruleTags: { env: "dev", team: "a" },
+    expect(extractHostTags("rms.dev.straightarrow.ai", ex)).toEqual({
+      env: "dev",
+      team: "a",
     });
   });
 
-  it("applies fixed tags for unrelated hosts", () => {
-    expect(
-      matchRequestHost(
-        "straightarrow-rms-git-main.vercel.app",
-        rules,
-        "straightarrow.ai",
-      ),
-    ).toEqual({ allowed: true, ruleTags: { env: "preview" } });
+  it("returns no tags without a match", () => {
+    expect(extractHostTags("other.com", extractors)).toEqual({});
   });
 
-  it("tags localhost when a localhost rule exists", () => {
-    expect(matchRequestHost("localhost", rules, "straightarrow.ai")).toEqual({
-      allowed: true,
-      ruleTags: { env: "local" },
-    });
+  it("skips invalid stored patterns", () => {
+    expect(
+      extractHostTags("a.com", [{ pattern: "a..com", fixedTags: { x: "1" } }]),
+    ).toEqual({});
   });
+});
 
-  it("falls back to the main domain and its subdomains without tags", () => {
-    expect(
-      matchRequestHost("www.straightarrow.ai", rules, "straightarrow.ai"),
-    ).toEqual({
-      allowed: true,
-      ruleTags: {},
-    });
-    expect(
-      matchRequestHost("a.b.straightarrow.ai", [], "straightarrow.ai"),
-    ).toEqual({
-      allowed: true,
-      ruleTags: {},
-    });
-  });
+describe("resolveHost", () => {
+  const project = { domains, extractors, fallbackDomain: "unused.com" };
 
-  it("always allows loopback hosts", () => {
-    for (const host of ["localhost", "127.0.0.1", "::1"]) {
-      expect(matchRequestHost(host, [], "acme.com")).toEqual({
-        allowed: true,
-        ruleTags: {},
-      });
-    }
-  });
-
-  it("rejects hosts that match nothing", () => {
-    expect(
-      matchRequestHost("other.vercel.app", rules, "straightarrow.ai"),
-    ).toEqual({
-      allowed: false,
-    });
-    expect(
-      matchRequestHost("straightarrow.ai.evil.com", rules, "straightarrow.ai"),
-    ).toEqual({
+  it("denies hosts no domain allows, even when an extractor matches", () => {
+    const ex = [{ pattern: "*.evil.com", fixedTags: { env: "x" } }];
+    expect(resolveHost("a.evil.com", { ...project, extractors: ex })).toEqual({
       allowed: false,
     });
   });
 
-  it("skips invalid stored patterns instead of throwing", () => {
+  it("tags with the domain's environment", () => {
+    expect(resolveHost("straightarrow-rms.vercel.app", project)).toEqual({
+      allowed: true,
+      domainId: "preview",
+      tags: { env: "preview" },
+    });
+  });
+
+  it("lets extractor tags override the domain's environment", () => {
+    const ex = [
+      { pattern: "{account}.rms.{env}.straightarrow.ai", fixedTags: {} },
+    ];
+    // Matched by the primary (env=prod), but the extractor reads env=staging.
     expect(
-      matchRequestHost(
-        "acme.com",
-        [{ pattern: "*.com", fixedTags: {} }],
-        "x.com",
-      ),
-    ).toEqual({ allowed: false });
+      resolveHost("acme.rms.staging.straightarrow.ai", {
+        ...project,
+        extractors: ex,
+      }),
+    ).toEqual({
+      allowed: true,
+      domainId: "primary",
+      tags: { env: "staging", account: "acme" },
+    });
+  });
+
+  it("omits env when the domain has none", () => {
+    expect(resolveHost("rms.straightarrow.ai", project)).toEqual({
+      allowed: true,
+      domainId: "exact",
+      tags: {},
+    });
+  });
+
+  it("always allows loopback and still runs extractors", () => {
+    expect(resolveHost("localhost", project)).toEqual({
+      allowed: true,
+      domainId: null,
+      tags: { env: "local" },
+    });
+    expect(resolveHost("::1", { ...project, extractors: [] })).toEqual({
+      allowed: true,
+      domainId: null,
+      tags: {},
+    });
+  });
+
+  it("falls back to the legacy main domain when a Project has no domain rows", () => {
+    const legacy = { domains: [], extractors: [], fallbackDomain: "acme.com" };
+    expect(resolveHost("www.acme.com", legacy)).toEqual({
+      allowed: true,
+      domainId: null,
+      tags: {},
+    });
+    expect(resolveHost("acme.com.evil.com", legacy)).toEqual({
+      allowed: false,
+    });
   });
 });

@@ -240,7 +240,7 @@ export async function POST(req: NextRequest) {
       viewportHeight: data.viewportHeight,
       metadata: data.metadata,
       diagnosticTrail: data.diagnosticTrail,
-      tags: mergeFeedbackTags(sanitizeAppTags(data.tags), originMatch.ruleTags),
+      tags: mergeFeedbackTags(sanitizeAppTags(data.tags), originMatch.tags),
       screenshotId,
     },
     include: {

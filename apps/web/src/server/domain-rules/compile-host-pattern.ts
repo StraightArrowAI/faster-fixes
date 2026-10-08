@@ -10,9 +10,8 @@ export type CompileHostPatternResult =
 
 const PLACEHOLDER_NAME = /^[a-z][a-z0-9_]{0,31}$/;
 const LITERAL_CHAR = /^[a-z0-9-]$/;
-const LITERAL_LABEL = /^[a-z0-9-]+$/;
-// Tokens are confined to one label so `{env}` can never absorb `dev.evil`; the
-// pattern doubles as the access gate (ADR-0012).
+// Tokens are confined to one label so `{env}` reads exactly one label and never
+// absorbs `dev.evil`.
 const TOKEN_MATCH = "[a-z0-9-]+";
 // Each extra token in a label multiplies regex backtracking on a hostile Origin;
 // two keeps worst case quadratic in a 63-char label.
@@ -108,15 +107,6 @@ export function compileHostPattern(raw: string): CompileHostPatternResult {
     }
 
     regexes.push(new RegExp(`^${regex}$`));
-  }
-
-  // Fixing the registrable domain stops patterns like `*.com` from opening the
-  // widget to a whole TLD.
-  if (
-    source !== "localhost" &&
-    (labels.length < 2 || !labels.slice(-2).every((l) => LITERAL_LABEL.test(l)))
-  ) {
-    return fail("The last two labels must be plain text, e.g. example.com.");
   }
 
   return { ok: true, pattern: { source, labels: regexes, placeholders } };
