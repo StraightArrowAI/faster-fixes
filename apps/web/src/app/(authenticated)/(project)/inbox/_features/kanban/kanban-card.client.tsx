@@ -86,23 +86,26 @@ function KanbanCardView({
       )}
 
       <div className="min-w-0 flex-1">
-        <p className="line-clamp-3 text-sm leading-snug">{feedback.comment}</p>
-
-        {/* Both items are min-w-0 so a long host or env name truncates instead
-            of widening the lane. The badge is forced to block because the
-            inline-flex Badge base clips text without an ellipsis. */}
-        <div className="mt-1.5 flex min-w-0 items-center gap-1.5">
-          <p className="text-muted-foreground min-w-0 truncate text-xs">
-            {formatPageUrl(feedback.pageUrl)}
+        {/* The env badge sits top-right beside the comment rather than in the
+            URL row, where a long URL squeezed it to nothing. It never shrinks;
+            long env names truncate within max-w-24 instead (block, because the
+            inline-flex Badge base clips without an ellipsis). */}
+        <div className="flex items-start gap-2">
+          <p className="line-clamp-3 min-w-0 flex-1 text-sm leading-snug">
+            {feedback.comment}
           </p>
           {env && (
             <EnvironmentBadge
               environment={env}
               color={environmentColors[env]}
-              className="block min-w-0 shrink"
+              className="block max-w-24 shrink-0"
             />
           )}
         </div>
+
+        <p className="text-muted-foreground mt-1.5 truncate text-xs">
+          {formatPageUrl(feedback.pageUrl)}
+        </p>
 
         <div className="mt-2 flex items-center gap-2">
           {feedback.assignee ? (
