@@ -25,6 +25,7 @@ export const getReviewers = protectedProcedure
         organizationId: project.organizationId,
         userId: session.user.id,
       },
+      select: { role: true },
     });
 
     if (!membership) {
@@ -57,6 +58,11 @@ export const getReviewers = protectedProcedure
       }),
     ]);
 
+    // A share link is the reviewer's credential. Only the roles that can create
+    // reviewers and send links may read them; other members see send history.
+    const canReadLinks =
+      membership.role === "owner" || membership.role === "admin";
+
     const lastSentAt = new Map(
       latestSends.map((send) => [
         `${send.reviewerId}:${send.projectDomainId}`,
@@ -65,7 +71,9 @@ export const getReviewers = protectedProcedure
     );
 
     return reviewers.map((reviewer) => {
-      const token = readToken(reviewer.id, reviewer.tokenCiphertext);
+      const token = canReadLinks
+        ? readToken(reviewer.id, reviewer.tokenCiphertext)
+        : null;
 
       return {
         id: reviewer.id,

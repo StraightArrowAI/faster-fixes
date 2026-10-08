@@ -167,7 +167,9 @@ domain's path.
 `reviewer_link_send` (distinct send events, not rows). Exceeding it returns a clear
 error.
 
-**Permissions**: create and send — owner/admin. Read — any member.
+**Permissions**: create and send — owner/admin. Read the list and send history — any
+member. Share links (they contain the reviewer's token) — owner/admin only; other members
+see no Copy link.
 
 ## Reviewers table
 

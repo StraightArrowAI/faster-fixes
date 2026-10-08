@@ -77,6 +77,9 @@ export function ReviewersTable({ projectId, reviewers }: ReviewersTableProps) {
             <TableCell>
               {reviewer.links.length > 0 ? (
                 <CopyReviewerLinkMenu links={reviewer.links} />
+              ) : !reviewer.isLegacyToken ? (
+                // Links are withheld from members who cannot manage reviewers.
+                <span className="text-muted-foreground text-xs">—</span>
               ) : (
                 // Legacy reviewers only have a token hash; a send issues a
                 // new token that links can be rebuilt from.
