@@ -23,6 +23,17 @@ type ReviewersTableProps = {
   reviewers: GetReviewersOutput;
 };
 
+// Host and path only; the full URL with its token stays behind "Copy link".
+function formatLinkTarget(linkUrl: string | null): string {
+  if (!linkUrl) return "Main domain";
+  try {
+    const url = new URL(linkUrl);
+    return `${url.host}${url.pathname === "/" ? "" : url.pathname}`;
+  } catch {
+    return "Main domain";
+  }
+}
+
 export function ReviewersTable({ projectId, reviewers }: ReviewersTableProps) {
   const [copied, setCopied] = React.useState<string | null>(null);
 
@@ -56,23 +67,31 @@ export function ReviewersTable({ projectId, reviewers }: ReviewersTableProps) {
             </TableCell>
             <TableCell>{reviewer.feedbackCount}</TableCell>
             <TableCell>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => handleCopy(reviewer.shareUrl, reviewer.id)}
-              >
-                {copied === reviewer.id ? (
-                  <>
-                    <Check className="text-success size-3" />
-                    Copied
-                  </>
-                ) : (
-                  <>
-                    <Copy className="size-3" />
-                    Copy link
-                  </>
-                )}
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleCopy(reviewer.shareUrl, reviewer.id)}
+                >
+                  {copied === reviewer.id ? (
+                    <>
+                      <Check className="text-success size-3" />
+                      Copied
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="size-3" />
+                      Copy link
+                    </>
+                  )}
+                </Button>
+                <span
+                  className="text-muted-foreground max-w-56 truncate text-xs"
+                  title={reviewer.linkUrl ?? undefined}
+                >
+                  {formatLinkTarget(reviewer.linkUrl)}
+                </span>
+              </div>
             </TableCell>
             <TableCell>
               <div className="flex items-center gap-1">

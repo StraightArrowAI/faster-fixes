@@ -19,6 +19,7 @@ import {
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -44,7 +45,7 @@ export function CreateReviewerDialog({
 
   const form = useForm<CreateReviewerInputs>({
     resolver: zodResolver(CreateReviewerSchema),
-    defaultValues: { projectId, name: "" },
+    defaultValues: { projectId, name: "", linkUrl: "" },
   });
 
   const createReviewer = useMutation(
@@ -79,8 +80,8 @@ export function CreateReviewerDialog({
         <DialogHeader>
           <DialogTitle>New reviewer</DialogTitle>
           <DialogDescription>
-            Enter your client&apos;s name. A unique share link will be
-            generated.
+            Enter your client&apos;s name and, optionally, the page their link
+            should open. A unique share link will be generated.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -106,6 +107,29 @@ export function CreateReviewerDialog({
                       {...field}
                     />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="linkUrl"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Link</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="text"
+                      inputMode="url"
+                      placeholder="https://app.example.com/page"
+                      disabled={createReviewer.isPending}
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Leave empty to use the main domain. The host must be the
+                    main domain or match a domain rule.
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}

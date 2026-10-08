@@ -19,13 +19,17 @@ export type HostMatch =
 // only code on the developer's machine can produce these origins.
 const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
 
+export function normalizeHostname(hostname: string): string | null {
+  const host = hostname.toLowerCase().replace(/\.$/, "");
+  // URL keeps IPv6 brackets ("[::1]"); strip them so loopback matching works.
+  return host.replace(/^\[(.*)\]$/, "$1") || null;
+}
+
 export function getRequestHost(headers: Headers): string | null {
   const origin = headers.get("origin") ?? headers.get("referer");
   if (!origin) return null;
   try {
-    const hostname = new URL(origin).hostname.toLowerCase().replace(/\.$/, "");
-    // URL keeps IPv6 brackets ("[::1]"); strip them so loopback matching works.
-    return hostname.replace(/^\[(.*)\]$/, "$1") || null;
+    return normalizeHostname(new URL(origin).hostname);
   } catch {
     return null;
   }

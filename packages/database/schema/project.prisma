@@ -55,6 +55,10 @@ model Reviewer {
   token    String  @unique
   isActive Boolean @default(true)
 
+  // Page the share link opens; null means the main domain. Any allowed host
+  // works because the token is not bound to a domain.
+  linkUrl String?
+
   feedback Feedback[]
 
   @@index([projectId])

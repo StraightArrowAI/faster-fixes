@@ -1,5 +1,10 @@
 "use server";
 
+import { resolveRequestOrigin } from "@/server/api/resolve-request-origin";
+import {
+  buildReviewerShareUrl,
+  parseReviewerLinkUrl,
+} from "@/server/reviewers/reviewer-share-url";
 import { protectedProcedure } from "@/server/trpc/trpc";
 import { TRPCError, inferProcedureOutput } from "@trpc/server";
 import crypto from "crypto";
@@ -12,6 +17,12 @@ export const createReviewer = protectedProcedure
 
     const project = await prisma.project.findUnique({
       where: { id: input.projectId },
+      include: {
+        domainRules: {
+          orderBy: { position: "asc" },
+          select: { pattern: true, fixedTags: true },
+        },
+      },
     });
 
     if (!project) {
@@ -30,6 +41,27 @@ export const createReviewer = protectedProcedure
       throw new TRPCError({ code: "FORBIDDEN", message: "Access denied." });
     }
 
+    let linkUrl: string | null = null;
+    if (input.linkUrl) {
+      const parsed = parseReviewerLinkUrl(input.linkUrl);
+      if (!parsed.ok) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: parsed.error });
+      }
+      // Same check the widget's requests face, so a link we hand out can
+      // never land on a page where the token is refused.
+      const origin = resolveRequestOrigin(
+        new Headers({ origin: new URL(parsed.url).origin }),
+        project,
+      );
+      if (!origin.allowed) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `${parsed.host} is not allowed for this project. Use the main domain or add a domain rule in settings.`,
+        });
+      }
+      linkUrl = parsed.url;
+    }
+
     const token = crypto.randomBytes(24).toString("hex");
     const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
 
@@ -38,6 +70,7 @@ export const createReviewer = protectedProcedure
         projectId: input.projectId,
         name: input.name,
         token: tokenHash,
+        linkUrl,
       },
     });
 
@@ -46,7 +79,7 @@ export const createReviewer = protectedProcedure
       id: reviewer.id,
       name: reviewer.name,
       token,
-      shareUrl: `https://${project.domain}?ff_token=${token}`,
+      shareUrl: buildReviewerShareUrl(linkUrl, project.domain, token),
     };
   });
 

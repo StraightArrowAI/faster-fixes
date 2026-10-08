@@ -1,5 +1,6 @@
 "use server";
 
+import { buildReviewerShareUrl } from "@/server/reviewers/reviewer-share-url";
 import { protectedProcedure } from "@/server/trpc/trpc";
 import { inferProcedureOutput, TRPCError } from "@trpc/server";
 import z from "zod";
@@ -43,7 +44,8 @@ export const getReviewers = protectedProcedure
       isActive: r.isActive,
       createdAt: r.createdAt,
       feedbackCount: r._count.feedback,
-      shareUrl: `https://${project.domain}?ff_token=${r.token}`,
+      linkUrl: r.linkUrl,
+      shareUrl: buildReviewerShareUrl(r.linkUrl, project.domain, r.token),
     }));
   });
 
