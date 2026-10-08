@@ -18,15 +18,16 @@ type DomainRulesSectionProps = {
 export function DomainRulesSection({ projectId }: DomainRulesSectionProps) {
   const trpc = useTRPC();
   const rulesQuery = useQuery(
-    trpc.authenticated.projects.domainRules.list.queryOptions({ projectId }),
+    trpc.authenticated.projects.tagExtractors.list.queryOptions({ projectId }),
   );
 
   return (
     <div className="flex flex-col gap-6">
       <div className="text-muted-foreground flex flex-col gap-1 text-sm">
         <p>
-          Rules are evaluated in order. The first match determines the
-          environment.
+          Tag extractors derive tags such as env from the request host. They run
+          only after a domain allows the request and never grant access.
+          Extractors are evaluated in order; the first match wins.
         </p>
         <p>
           <code className="font-mono">{"{name}"}</code> matches characters
@@ -45,15 +46,20 @@ export function DomainRulesSection({ projectId }: DomainRulesSectionProps) {
           </div>
         ),
         Errored: (
-          <p className="text-muted-foreground text-sm">Failed to load rules.</p>
+          <p className="text-muted-foreground text-sm">
+            Failed to load tag extractors.
+          </p>
         ),
-        Empty: <p className="text-muted-foreground text-sm">No rules.</p>,
+        Empty: (
+          <p className="text-muted-foreground text-sm">No tag extractors.</p>
+        ),
         Success: ({ data: { rules, canEdit } }) => (
           <>
             <div className="flex flex-col gap-3">
               {rules.length === 0 ? (
                 <p className="text-muted-foreground text-sm">
-                  No rules. Only the main domain and localhost are allowed.
+                  No tag extractors. Feedback gets only the environment of its
+                  domain.
                 </p>
               ) : (
                 rules.map((rule, index) => (
@@ -74,7 +80,7 @@ export function DomainRulesSection({ projectId }: DomainRulesSectionProps) {
                   trigger={
                     <Button variant="outline" className="self-start">
                       <Plus className="size-4" />
-                      Add rule
+                      Add extractor
                     </Button>
                   }
                 />

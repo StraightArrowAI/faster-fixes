@@ -19,7 +19,7 @@ export const updateDomainRule = protectedProcedure
     });
 
     try {
-      await prisma.projectDomainRule.update({
+      await prisma.projectTagExtractor.update({
         where: { id: rule.id },
         data: { pattern: input.pattern, fixedTags: input.fixedTags },
       });

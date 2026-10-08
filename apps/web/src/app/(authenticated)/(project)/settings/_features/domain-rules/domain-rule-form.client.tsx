@@ -1,7 +1,9 @@
 "use client";
 
-import type { DomainRuleInput } from "@/server/domain-rules/match-request-host";
-import { isOpenSharedHostPattern } from "@/server/domain-rules/shared-hosting-suffixes";
+import type {
+  ProjectDomainInput,
+  TagExtractorInput,
+} from "@/server/domain-rules/match-request-host";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@workspace/ui/components/button";
 import {
@@ -14,7 +16,6 @@ import {
   FormMessage,
 } from "@workspace/ui/components/form";
 import { Input } from "@workspace/ui/components/input";
-import { AlertTriangle } from "lucide-react";
 import { useForm, useWatch } from "react-hook-form";
 import { convertRowsToDraftFixedTags } from "./convert-fixed-tags";
 import {
@@ -26,10 +27,11 @@ import { HostTestBox } from "./host-test-box.client";
 
 type DomainRuleFormProps = {
   defaultValues: DomainRuleFormInput;
-  // Saved rules other than the one being edited, in evaluation order.
-  otherRules: DomainRuleInput[];
+  // Saved extractors other than the one being edited, in evaluation order.
+  otherRules: TagExtractorInput[];
   draftIndex: number;
-  mainDomain: string;
+  domains: (ProjectDomainInput & { url: string })[];
+  fallbackDomain: string;
   submitLabel: string;
   isPending: boolean;
   onSubmit: (values: DomainRuleFormInput) => void;
@@ -40,7 +42,8 @@ export function DomainRuleForm({
   defaultValues,
   otherRules,
   draftIndex,
-  mainDomain,
+  domains,
+  fallbackDomain,
   submitLabel,
   isPending,
   onSubmit,
@@ -87,14 +90,6 @@ export function DomainRuleForm({
                 Hostname only, without protocol, port, or path.
               </FormDescription>
               <FormMessage />
-              {isOpenSharedHostPattern(pattern) && (
-                <p className="text-muted-foreground flex gap-2 text-sm">
-                  <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-                  Anyone can deploy a site on this shared hosting domain. Every
-                  matching site will be able to submit feedback to this project.
-                  Add a fixed prefix to narrow the match.
-                </p>
-              )}
             </FormItem>
           )}
         />
@@ -102,9 +97,10 @@ export function DomainRuleForm({
         <FixedTagsEditor control={form.control} disabled={isPending} />
 
         <HostTestBox
-          rules={testRules}
+          domains={domains}
+          extractors={testRules}
           draftIndex={draftIndex}
-          mainDomain={mainDomain}
+          fallbackDomain={fallbackDomain}
         />
 
         <div className="flex justify-end gap-2">

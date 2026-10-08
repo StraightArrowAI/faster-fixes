@@ -33,10 +33,10 @@ export function DeleteDomainRuleButton({
   const invalidate = useInvalidateDomainRules(projectId);
 
   const deleteRule = useMutation(
-    trpc.authenticated.projects.domainRules.delete.mutationOptions({
+    trpc.authenticated.projects.tagExtractors.delete.mutationOptions({
       onSuccess: () => {
         invalidate();
-        toast.success("Rule deleted");
+        toast.success("Tag extractor deleted");
       },
       onError: (error) => toast.error(error.message),
     }),
@@ -56,11 +56,11 @@ export function DeleteDomainRuleButton({
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete rule</AlertDialogTitle>
+          <AlertDialogTitle>Delete tag extractor</AlertDialogTitle>
           <AlertDialogDescription>
-            Delete <span className="font-mono font-medium">{pattern}</span>?
-            Widget requests from hosts that only this rule allows will be
-            rejected. Existing feedback keeps its tags.
+            Delete <span className="font-mono font-medium">{pattern}</span>? New
+            feedback from matching hosts will no longer get its tags. Existing
+            feedback keeps its tags.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

@@ -50,7 +50,8 @@
 
         "SLACK_CLIENT_ID",
         "SLACK_CLIENT_SECRET",
-        "SLACK_TOKEN_ENCRYPTION_KEY"
+        "SLACK_TOKEN_ENCRYPTION_KEY",
+        "REVIEWER_TOKEN_ENCRYPTION_KEY"
       ]
     }
   }

@@ -8,6 +8,7 @@ import { ApiKeyMigrationNotice } from "./api-key-migration-notice.client";
 import { BoardColumnsSection } from "./board-columns/board-columns-section.client";
 import { DomainRulesSection } from "./domain-rules/domain-rules-section.client";
 import { DeleteProjectButton } from "./delete/delete-project-button.client";
+import { ProjectDomainsSection } from "./domains/project-domains-section.client";
 import { GitHubSection } from "./github/github-section.client";
 import { JiraSection } from "./jira/jira-section.client";
 import { LinearSection } from "./linear/linear-section.client";
@@ -23,11 +24,20 @@ export function ProjectSettingsTab({ projectId }: ProjectSettingsTabProps) {
     <div className="flex flex-col gap-12">
       <DashboardSection
         title="Project information"
-        description="Edit the name, URL, and widget configuration."
+        description="Edit the name and widget configuration."
         cardTitle="General settings"
         cardClassName="lg:max-w-lg"
       >
         <UpdateProjectForm projectId={projectId} />
+      </DashboardSection>
+
+      <DashboardSection
+        title="Domains"
+        description="Where the widget runs and where reviewer links point."
+        cardTitle="Domains"
+        cardClassName="lg:max-w-2xl"
+      >
+        <ProjectDomainsSection projectId={projectId} />
       </DashboardSection>
 
       <DashboardSection
@@ -40,9 +50,9 @@ export function ProjectSettingsTab({ projectId }: ProjectSettingsTabProps) {
       </DashboardSection>
 
       <DashboardSection
-        title="Domains & environments"
-        description="Allow the widget on additional hosts and tag feedback with the environment it came from."
-        cardTitle="Domain rules"
+        title="Tag extractors"
+        description="Tag feedback with values read from the request host, such as the environment it came from."
+        cardTitle="Tag extractors"
         cardClassName="lg:max-w-2xl"
       >
         <DomainRulesSection projectId={projectId} />

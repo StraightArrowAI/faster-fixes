@@ -7,7 +7,7 @@ export function useInvalidateDomainRules(projectId: string) {
 
   return () => {
     queryClient.invalidateQueries({
-      queryKey: trpc.authenticated.projects.domainRules.list.queryKey({
+      queryKey: trpc.authenticated.projects.tagExtractors.list.queryKey({
         projectId,
       }),
     });

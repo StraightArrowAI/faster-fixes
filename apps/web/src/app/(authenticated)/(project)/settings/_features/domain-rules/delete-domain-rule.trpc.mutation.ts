@@ -19,8 +19,8 @@ export const deleteDomainRule = protectedProcedure
 
     // Existing Feedback keeps its tags: they are fixed at submission (ADR-0012).
     await prisma.$transaction([
-      prisma.projectDomainRule.delete({ where: { id: rule.id } }),
-      prisma.projectDomainRule.updateMany({
+      prisma.projectTagExtractor.delete({ where: { id: rule.id } }),
+      prisma.projectTagExtractor.updateMany({
         where: { projectId: rule.projectId, position: { gt: rule.position } },
         data: { position: { decrement: 1 } },
       }),

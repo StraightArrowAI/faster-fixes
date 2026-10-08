@@ -1,5 +1,5 @@
 ---
-status: accepted
+status: accepted; access-control half superseded by ADR-0013
 ---
 
 # Domain rules allow any host and derive Feedback tags from it

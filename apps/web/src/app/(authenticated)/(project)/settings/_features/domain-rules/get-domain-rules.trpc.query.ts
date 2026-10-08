@@ -15,7 +15,7 @@ export const getDomainRules = protectedProcedure
     });
 
     const [rules, membership] = await Promise.all([
-      prisma.projectDomainRule.findMany({
+      prisma.projectTagExtractor.findMany({
         where: { projectId: input.projectId },
         orderBy: { position: "asc" },
         select: { id: true, pattern: true, fixedTags: true, position: true },

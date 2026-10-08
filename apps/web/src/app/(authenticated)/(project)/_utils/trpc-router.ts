@@ -56,6 +56,12 @@ import { updateDomainRulePosition } from "../settings/_features/domain-rules/upd
 import { updateDomainRule } from "../settings/_features/domain-rules/update-domain-rule.trpc.mutation";
 import { updateEnvironmentColors } from "../settings/_features/domain-rules/update-environment-colors.trpc.mutation";
 import { updateFeedbacksColumn } from "../inbox/_features/kanban/update-feedbacks-column.trpc.mutation";
+import { sendReviewerLinks } from "../reviewers/_features/send/send-reviewer-links.trpc.mutation";
+import { getProjectDomains } from "../settings/_features/domains/get-project-domains.trpc.query";
+import { createProjectDomain } from "../settings/_features/domains/create-project-domain.trpc.mutation";
+import { updateProjectDomain } from "../settings/_features/domains/update-project-domain.trpc.mutation";
+import { updateProjectPrimaryDomain } from "../settings/_features/domains/update-project-primary-domain.trpc.mutation";
+import { deleteProjectDomain } from "../settings/_features/domains/delete-project-domain.trpc.mutation";
 import { getProjects } from "./get-projects.trpc.query";
 
 export const projectsRouter = router({
@@ -72,6 +78,14 @@ export const projectsRouter = router({
     revoke: revokeReviewer,
     restore: restoreReviewer,
     delete: deleteReviewer,
+    sendLinks: sendReviewerLinks,
+  }),
+  domains: router({
+    list: getProjectDomains,
+    create: createProjectDomain,
+    update: updateProjectDomain,
+    setPrimary: updateProjectPrimaryDomain,
+    delete: deleteProjectDomain,
   }),
   feedback: router({
     list: getFeedback,
@@ -120,7 +134,7 @@ export const projectsRouter = router({
     updatePosition: updateFeedbackColumnPosition,
     delete: deleteFeedbackColumn,
   }),
-  domainRules: router({
+  tagExtractors: router({
     list: getDomainRules,
     create: createDomainRule,
     update: updateDomainRule,

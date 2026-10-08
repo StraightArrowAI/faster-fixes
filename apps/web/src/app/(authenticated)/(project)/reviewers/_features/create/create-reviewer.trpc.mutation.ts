@@ -1,13 +1,16 @@
 "use server";
 
-import { resolveRequestOrigin } from "@/server/api/resolve-request-origin";
 import {
-  buildReviewerShareUrl,
-  parseReviewerLinkUrl,
-} from "@/server/reviewers/reviewer-share-url";
+  assertReviewerLinkSendAllowed,
+  createReviewerLinkSends,
+  getReviewerLinkDomains,
+} from "@/server/reviewers/reviewer-link-sends";
+import { buildReviewerShareUrl } from "@/server/reviewers/reviewer-share-url";
+import { issueReviewerToken } from "@/server/reviewers/reviewer-token";
+import { sendReviewerLinksEmail } from "@/server/reviewers/send-reviewer-links-email";
 import { protectedProcedure } from "@/server/trpc/trpc";
 import { TRPCError, inferProcedureOutput } from "@trpc/server";
-import crypto from "crypto";
+
 import { CreateReviewerSchema } from "./create-reviewer.schema";
 
 export const createReviewer = protectedProcedure
@@ -17,12 +20,7 @@ export const createReviewer = protectedProcedure
 
     const project = await prisma.project.findUnique({
       where: { id: input.projectId },
-      include: {
-        domainRules: {
-          orderBy: { position: "asc" },
-          select: { pattern: true, fixedTags: true },
-        },
-      },
+      select: { id: true, name: true, organizationId: true },
     });
 
     if (!project) {
@@ -35,51 +33,69 @@ export const createReviewer = protectedProcedure
         userId: session.user.id,
         role: { in: ["owner", "admin"] },
       },
+      select: { id: true },
     });
 
     if (!membership) {
       throw new TRPCError({ code: "FORBIDDEN", message: "Access denied." });
     }
 
-    let linkUrl: string | null = null;
-    if (input.linkUrl) {
-      const parsed = parseReviewerLinkUrl(input.linkUrl);
-      if (!parsed.ok) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: parsed.error });
-      }
-      // Same check the widget's requests face, so a link we hand out can
-      // never land on a page where the token is refused.
-      const origin = resolveRequestOrigin(
-        new Headers({ origin: new URL(parsed.url).origin }),
-        project,
-      );
-      if (!origin.allowed) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: `${parsed.host} is not allowed for this project. Use the main domain or add a domain rule in settings.`,
-        });
-      }
-      linkUrl = parsed.url;
+    const domains = await getReviewerLinkDomains(
+      prisma,
+      project.id,
+      input.domainIds,
+    );
+
+    // Before creating, so a rate-limited request leaves no half-created reviewer.
+    if (input.sendEmail) {
+      await assertReviewerLinkSendAllowed(prisma, project.id);
     }
 
-    const token = crypto.randomBytes(24).toString("hex");
-    const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+    const { token, tokenLookup, tokenCiphertext } = issueReviewerToken();
 
     const reviewer = await prisma.reviewer.create({
       data: {
-        projectId: input.projectId,
+        projectId: project.id,
         name: input.name,
-        token: tokenHash,
-        linkUrl,
+        email: input.email,
+        tokenLookup,
+        tokenCiphertext,
       },
     });
 
-    // Return raw token once — only the hash is persisted
+    // The reviewer exists at this point, so a failed email is reported in the
+    // result rather than thrown: the caller still gets the link to share.
+    let emailSent = false;
+    if (input.sendEmail) {
+      try {
+        await sendReviewerLinksEmail({
+          projectName: project.name,
+          to: input.email,
+          token,
+          domains,
+          message: input.message,
+        });
+        emailSent = true;
+      } catch (error) {
+        console.error("Failed to send reviewer invite email:", error);
+      }
+    }
+
+    if (emailSent) {
+      await createReviewerLinkSends(prisma, {
+        projectId: project.id,
+        reviewerId: reviewer.id,
+        domainIds: domains.map((domain) => domain.id),
+        sentById: membership.id,
+        message: input.message,
+      });
+    }
+
     return {
       id: reviewer.id,
       name: reviewer.name,
-      token,
-      shareUrl: buildReviewerShareUrl(linkUrl, project.domain, token),
+      shareUrl: buildReviewerShareUrl(domains[0]!.url, token),
+      emailSent,
     };
   });
 

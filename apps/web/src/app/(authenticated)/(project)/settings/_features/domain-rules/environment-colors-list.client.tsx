@@ -30,6 +30,9 @@ export function EnvironmentColorsList({
   const projectQuery = useQuery(
     trpc.authenticated.projects.get.queryOptions({ projectId }),
   );
+  const domainsQuery = useQuery(
+    trpc.authenticated.projects.domains.list.queryOptions({ projectId }),
+  );
   const colors = projectQuery.data?.environmentColors ?? {};
 
   const updateColors = useMutation(
@@ -65,12 +68,16 @@ export function EnvironmentColorsList({
       </p>
     ),
     Success: ({ data: feedbackEnvironments }) => {
-      // Rule envs are included so a color can be set before any feedback arrives.
+      // Configured envs are included so a color can be set before any
+      // feedback arrives. Captured {env} values only appear once used.
       const environments = [
         ...new Set([
           ...(feedbackEnvironments ?? []),
           ...rules.flatMap((rule) =>
             rule.fixedTags.env ? [rule.fixedTags.env] : [],
+          ),
+          ...(domainsQuery.data?.domains ?? []).flatMap((domain) =>
+            domain.environment ? [domain.environment] : [],
           ),
         ]),
       ].sort((a, b) => a.localeCompare(b));
@@ -78,8 +85,8 @@ export function EnvironmentColorsList({
       if (environments.length === 0) {
         return (
           <p className="text-muted-foreground text-sm">
-            No environments yet. They appear once feedback or a rule sets an env
-            tag.
+            No environments yet. They appear once a domain, a tag extractor, or
+            feedback sets an env tag.
           </p>
         );
       }

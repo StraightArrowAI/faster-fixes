@@ -20,7 +20,6 @@ import {
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -67,14 +66,12 @@ export function UpdateProjectForm({ projectId }: UpdateProjectFormProps) {
     defaultValues: {
       projectId,
       name: "",
-      domain: "",
       widgetEnabled: true,
     },
     values: project
       ? {
           projectId,
           name: project.name,
-          domain: project.domain,
           widgetEnabled: project.widgetConfig?.enabled ?? true,
         }
       : undefined,
@@ -116,30 +113,6 @@ export function UpdateProjectForm({ projectId }: UpdateProjectFormProps) {
               <FormControl>
                 <Input disabled={updateProject.isPending} {...field} />
               </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="domain"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Domain</FormLabel>
-              <FormControl>
-                <Input
-                  placeholder="client.com"
-                  disabled={updateProject.isPending}
-                  {...field}
-                />
-              </FormControl>
-              <FormDescription>
-                Subdomains, www., and protocol variants are matched
-                automatically. Localhost is always allowed for local
-                development. Configure additional hosts and environments under
-                Domains & environments.
-              </FormDescription>
               <FormMessage />
             </FormItem>
           )}

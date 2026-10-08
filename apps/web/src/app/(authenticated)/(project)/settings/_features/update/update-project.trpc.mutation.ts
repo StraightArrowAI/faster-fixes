@@ -33,7 +33,6 @@ export const updateProject = protectedProcedure
       where: { id: input.projectId },
       data: {
         name: input.name,
-        domain: input.domain,
         widgetConfig: {
           update: {
             enabled: input.widgetEnabled,

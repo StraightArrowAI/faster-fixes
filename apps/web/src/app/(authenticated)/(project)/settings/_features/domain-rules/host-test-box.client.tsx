@@ -1,6 +1,9 @@
 "use client";
 
-import type { DomainRuleInput } from "@/server/domain-rules/match-request-host";
+import type {
+  ProjectDomainInput,
+  TagExtractorInput,
+} from "@/server/domain-rules/match-request-host";
 import { Badge } from "@workspace/ui/components/badge";
 import { Input } from "@workspace/ui/components/input";
 import { Label } from "@workspace/ui/components/label";
@@ -8,32 +11,46 @@ import * as React from "react";
 import { FixedTagChips } from "./fixed-tag-chips";
 import { getHostTestResult, parseTestHost } from "./get-host-test-result";
 
+const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
+
 type HostTestBoxProps = {
-  rules: DomainRuleInput[];
+  domains: (ProjectDomainInput & { url: string })[];
+  extractors: TagExtractorInput[];
   draftIndex: number;
-  mainDomain: string;
+  fallbackDomain: string;
 };
 
 export function HostTestBox({
-  rules,
+  domains,
+  extractors,
   draftIndex,
-  mainDomain,
+  fallbackDomain,
 }: HostTestBoxProps) {
   const [input, setInput] = React.useState("");
   const host = parseTestHost(input);
-  const result = host ? getHostTestResult(host, rules, mainDomain) : null;
+  const result = host
+    ? getHostTestResult(host, { domains, extractors, fallbackDomain })
+    : null;
 
-  function describeMatch(matchedIndex: number) {
-    if (matchedIndex === -1) return "Main domain";
-    if (matchedIndex === draftIndex) return "This rule";
-    return `Rule ${matchedIndex + 1}: ${rules[matchedIndex]?.pattern}`;
+  function describeAccess() {
+    if (!result?.resolution.allowed) return "No domain matches this host";
+    if (result.matchedDomain) return `Domain: ${result.matchedDomain.url}`;
+    // Without a matching entry, only loopback or the legacy main domain (for a
+    // Project that has no domain rows yet) can allow a host.
+    return host && LOOPBACK_HOSTS.has(host) ? "Localhost" : "Main domain";
+  }
+
+  function describeExtractor(index: number) {
+    if (index === -1) return "No extractor matches";
+    if (index === draftIndex) return "This extractor";
+    return `Extractor ${index + 1}: ${extractors[index]?.pattern}`;
   }
 
   return (
     <div className="bg-muted/50 flex flex-col gap-2 rounded-md border p-3">
-      <Label htmlFor="domain-rule-test-host">Test a hostname</Label>
+      <Label htmlFor="tag-extractor-test-host">Test a hostname</Label>
       <Input
-        id="domain-rule-test-host"
+        id="tag-extractor-test-host"
         value={input}
         onChange={(e) => setInput(e.target.value)}
         placeholder="app.dev.example.com"
@@ -45,24 +62,37 @@ export function HostTestBox({
       {result && (
         <div className="flex flex-col gap-1.5 text-sm">
           <div className="flex items-center gap-2">
-            <Badge variant={result.match.allowed ? "secondary" : "destructive"}>
-              {result.match.allowed ? "Allowed" : "Not allowed"}
+            <span className="text-muted-foreground w-14 shrink-0">Access</span>
+            <Badge
+              variant={result.resolution.allowed ? "secondary" : "destructive"}
+            >
+              {result.resolution.allowed ? "Allowed" : "Not allowed"}
             </Badge>
-            {result.match.allowed && (
-              <span className="text-muted-foreground truncate font-mono">
-                {describeMatch(result.matchedIndex)}
-              </span>
-            )}
+            <span className="text-muted-foreground truncate font-mono">
+              {describeAccess()}
+            </span>
           </div>
-          {result.match.allowed && (
-            <div className="flex items-center gap-2">
-              <span className="text-muted-foreground">Tags</span>
-              {Object.keys(result.match.ruleTags).length > 0 ? (
-                <FixedTagChips tags={result.match.ruleTags} />
-              ) : (
-                <span className="text-muted-foreground">None</span>
-              )}
-            </div>
+          {result.resolution.allowed && (
+            <>
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground w-14 shrink-0">
+                  Match
+                </span>
+                <span className="text-muted-foreground truncate font-mono">
+                  {describeExtractor(result.matchedExtractorIndex)}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground w-14 shrink-0">
+                  Tags
+                </span>
+                {Object.keys(result.resolution.tags).length > 0 ? (
+                  <FixedTagChips tags={result.resolution.tags} />
+                ) : (
+                  <span className="text-muted-foreground">None</span>
+                )}
+              </div>
+            </>
           )}
         </div>
       )}

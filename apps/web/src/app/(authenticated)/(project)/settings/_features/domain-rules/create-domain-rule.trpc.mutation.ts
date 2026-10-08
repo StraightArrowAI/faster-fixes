@@ -18,13 +18,13 @@ export const createDomainRule = protectedProcedure
 
     try {
       return await prisma.$transaction(async (tx) => {
-        const last = await tx.projectDomainRule.findFirst({
+        const last = await tx.projectTagExtractor.findFirst({
           where: { projectId: input.projectId },
           orderBy: { position: "desc" },
           select: { position: true },
         });
 
-        return tx.projectDomainRule.create({
+        return tx.projectTagExtractor.create({
           data: {
             projectId: input.projectId,
             pattern: input.pattern,

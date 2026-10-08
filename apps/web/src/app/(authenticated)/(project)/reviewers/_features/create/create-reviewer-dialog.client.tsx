@@ -1,12 +1,8 @@
 "use client";
 
-import {
-  CreateReviewerInputs,
-  CreateReviewerSchema,
-} from "@/app/(authenticated)/(project)/reviewers/_features/create/create-reviewer.schema";
 import { useTRPC } from "@/lib/trpc/trpc-client";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { matchQueryStatus } from "@/utils/tanstack-query/match-query-status";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@workspace/ui/components/button";
 import {
   Dialog,
@@ -16,19 +12,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@workspace/ui/components/dialog";
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@workspace/ui/components/form";
-import { Input } from "@workspace/ui/components/input";
+import { Skeleton } from "@workspace/ui/components/skeleton";
 import { Plus } from "lucide-react";
 import * as React from "react";
-import { useForm } from "react-hook-form";
+
+import { CreateReviewerForm } from "./create-reviewer-form.client";
 
 type CreateReviewerDialogProps = {
   projectId: string;
@@ -40,32 +28,16 @@ export function CreateReviewerDialog({
   onCreated,
 }: CreateReviewerDialogProps) {
   const trpc = useTRPC();
-  const queryClient = useQueryClient();
   const [open, setOpen] = React.useState(false);
 
-  const form = useForm<CreateReviewerInputs>({
-    resolver: zodResolver(CreateReviewerSchema),
-    defaultValues: { projectId, name: "", linkUrl: "" },
+  const domainsQuery = useQuery({
+    ...trpc.authenticated.projects.domains.list.queryOptions({ projectId }),
+    enabled: open,
   });
 
-  const createReviewer = useMutation(
-    trpc.authenticated.projects.reviewer.create.mutationOptions({
-      onSuccess: (result) => {
-        queryClient.invalidateQueries(
-          trpc.authenticated.projects.reviewer.list.queryOptions({ projectId }),
-        );
-        onCreated(result.shareUrl);
-        setOpen(false);
-        form.reset();
-      },
-      onError: (error) => {
-        form.setError("root", { message: error.message });
-      },
-    }),
-  );
-
-  const onSubmit = (data: CreateReviewerInputs) => {
-    createReviewer.mutate(data);
+  const handleCreated = (shareUrl: string) => {
+    onCreated(shareUrl);
+    setOpen(false);
   };
 
   return (
@@ -80,69 +52,31 @@ export function CreateReviewerDialog({
         <DialogHeader>
           <DialogTitle>New reviewer</DialogTitle>
           <DialogDescription>
-            Enter your client&apos;s name and, optionally, the page their link
-            should open. A unique share link will be generated.
+            Each reviewer gets a personal link that opens your site with the
+            feedback widget signed in as them.
           </DialogDescription>
         </DialogHeader>
-        <Form {...form}>
-          <form
-            onSubmit={form.handleSubmit(onSubmit)}
-            className="flex flex-col gap-4"
-          >
-            {form.formState.errors.root && (
-              <p className="text-destructive text-sm">
-                {form.formState.errors.root.message}
-              </p>
-            )}
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Name</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="Marie - CEO"
-                      disabled={createReviewer.isPending}
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+        {matchQueryStatus(domainsQuery, {
+          Loading: <Skeleton className="h-64 w-full" />,
+          Errored: (
+            <p className="text-destructive text-sm">
+              Failed to load the project domains. Try again later.
+            </p>
+          ),
+          Empty: (
+            <p className="text-muted-foreground text-sm">
+              Add a domain in project settings before adding reviewers.
+            </p>
+          ),
+          dataKey: "domains",
+          Success: ({ data }) => (
+            <CreateReviewerForm
+              projectId={projectId}
+              domains={data.domains}
+              onCreated={handleCreated}
             />
-            <FormField
-              control={form.control}
-              name="linkUrl"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Link</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="text"
-                      inputMode="url"
-                      placeholder="https://app.example.com/page"
-                      disabled={createReviewer.isPending}
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    Leave empty to use the main domain. The host must be the
-                    main domain or match a domain rule.
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <Button
-              type="submit"
-              disabled={createReviewer.isPending}
-              className="self-end"
-            >
-              {createReviewer.isPending ? "Creating..." : "Create"}
-            </Button>
-          </form>
-        </Form>
+          ),
+        })}
       </DialogContent>
     </Dialog>
   );

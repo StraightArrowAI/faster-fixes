@@ -17,7 +17,7 @@ export const updateDomainRulePosition = protectedProcedure
       forbiddenMessage: DOMAIN_RULES_FORBIDDEN_MESSAGE,
     });
 
-    const neighbor = await prisma.projectDomainRule.findFirst({
+    const neighbor = await prisma.projectTagExtractor.findFirst({
       where: {
         projectId: rule.projectId,
         position:
@@ -33,17 +33,17 @@ export const updateDomainRulePosition = protectedProcedure
         code: "BAD_REQUEST",
         message:
           input.direction === "up"
-            ? "This rule is already first."
-            : "This rule is already last.",
+            ? "This extractor is already first."
+            : "This extractor is already last.",
       });
     }
 
     await prisma.$transaction([
-      prisma.projectDomainRule.update({
+      prisma.projectTagExtractor.update({
         where: { id: rule.id },
         data: { position: neighbor.position },
       }),
-      prisma.projectDomainRule.update({
+      prisma.projectTagExtractor.update({
         where: { id: neighbor.id },
         data: { position: rule.position },
       }),

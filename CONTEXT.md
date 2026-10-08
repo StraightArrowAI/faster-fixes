@@ -25,20 +25,24 @@ The public, unguessable identifier for a Project (`proj_` + 96-bit random), embe
 _Avoid_: API key (the widget surface has no secret key), Client secret.
 
 **Allowed origins**:
-The web origins a Project's widget may call the API from: any host matching one of the Project's **Domain rules**, otherwise the Project's **main domain** plus any **subdomain** of it, and localhost for local development. Matched against the browser-set `Origin`, the real security boundary for widget requests. A Project is one *product* and may span unrelated domains. See ADR-0012 (supersedes the single-website rule in ADR-0005).
+The web origins a Project's widget may call the API from: the Project's **Domains** (each optionally including its subdomains) and localhost for local development. Matched against the browser-set `Origin`, the real security boundary for widget requests. A Project is one *product* and may span unrelated domains. See ADR-0013 (and ADR-0012, ADR-0005 for history).
 
-**Domain rule**:
-An ordered, per-Project host pattern (e.g. `{account}.rms.{env}.straightarrow.ai`) with optional fixed tags. The first matching rule allows the request and supplies the Feedback's **Tags**. `{name}` and `*` match within one label, never across a dot.
-_Avoid_: Allowlist entry, Domain template.
+**Domain**:
+A host a Project's widget may run on, and a link target offered when inviting a **Reviewer**. Exactly one is the **primary**; the rest are alternatives. Each may include its subdomains and may carry an **Environment**. See ADR-0013.
+_Avoid_: Main domain (the pre-ADR-0013 single field), Allowed host.
+
+**Tag extractor**:
+An ordered, per-Project host pattern (e.g. `{account}.rms.{env}.straightarrow.ai`) with optional fixed tags that adds **Tags** to an already-allowed request. Never grants access. `{name}` and `*` match within one label, never across a dot. Formerly "domain rule".
+_Avoid_: Domain rule.
 
 **Reviewer token**:
-The per-Reviewer secret that authorizes reading and submitting Feedback. Created in the dashboard, delivered to a Reviewer via URL param or localStorage. This — not the Project public ID — is the gate on Feedback access.
+The per-Reviewer secret that authorizes reading and submitting Feedback. One per Reviewer, shared by every Domain link they are sent; stored encrypted with a hash lookup (ADR-0013). Created in the dashboard, delivered to a Reviewer via URL param or localStorage. This — not the Project public ID — is the gate on Feedback access.
 
 **Agent token**:
 The organization-scoped secret (`ff_agent_`) for the agent/MCP API. The only genuine secret credential in the system; stored hashed and revocable.
 
 **Tag**:
-A `key → value` string pair on a Feedback, set once at submission from the matched **Domain rule** and the widget's `tags` prop (rule wins on conflict). Never rewritten when rules change.
+A `key → value` string pair on a Feedback, set once at submission from, in increasing precedence, the widget's `tags` prop, the matched **Domain**'s Environment, and the first matching **Tag extractor**. Never rewritten when configuration changes.
 _Avoid_: Label (reserved for tracker-side labels).
 
 **Environment**:
@@ -131,4 +135,4 @@ The fixed-size in-memory store the Widget fills from page load; oldest entries d
 - **"Closed" vs "Archived"** — historically used interchangeably. Resolved: the canonical user-facing term is **Archived**. The DB literal `"closed"` is retained for now to avoid a migration; rename is deferred.
 - **"Issue"** — refers exclusively to a tracker-side artifact (GitHub Issue, Linear Issue). Internal app records are **Feedback**, never "issues".
 - **"logs"** — used loosely for the captured browser data. Resolved: the canonical term is **Diagnostic Trail** (console + network), distinct from server-side logs.
-- **"API key"** — the widget historically embedded an `apiKey` stored like a secret (SHA-256 hash, last-4 shown, "regenerate" flow). Resolved: the widget surface has **no secret**. It embeds the public **Project public ID**, secured by the **allowed origins** (main domain, subdomains, and Domain rules) + **Reviewer token**. Genuine secrets exist only on the agent surface (**Agent token**). The widget `apiKey` is being removed.
+- **"API key"** — the widget historically embedded an `apiKey` stored like a secret (SHA-256 hash, last-4 shown, "regenerate" flow). Resolved: the widget surface has **no secret**. It embeds the public **Project public ID**, secured by the **allowed origins** (the Project's Domains) + **Reviewer token**. Genuine secrets exist only on the agent surface (**Agent token**). The widget `apiKey` is being removed.

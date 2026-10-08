@@ -51,6 +51,16 @@ export const createOnboardingProject = protectedProcedure
         organizationId: membership.organizationId,
         widgetConfig: { create: {} },
         feedbackColumns: { create: DEFAULT_FEEDBACK_COLUMNS },
+        // input.domain is already normalized by DomainSchema. Subdomains are
+        // included to match the main-domain behavior (ADR-0013).
+        domains: {
+          create: {
+            url: `https://${input.domain}`,
+            host: input.domain,
+            includeSubdomains: true,
+            isPrimary: true,
+          },
+        },
       },
     });
 

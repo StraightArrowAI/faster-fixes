@@ -32,7 +32,7 @@ export function DomainRuleRow({
   const invalidate = useInvalidateDomainRules(projectId);
 
   const moveRule = useMutation(
-    trpc.authenticated.projects.domainRules.updatePosition.mutationOptions({
+    trpc.authenticated.projects.tagExtractors.updatePosition.mutationOptions({
       onSuccess: () => invalidate(),
       onError: (error) => toast.error(error.message),
     }),
