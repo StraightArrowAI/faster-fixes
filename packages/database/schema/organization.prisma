@@ -39,6 +39,7 @@ model Member {
   role           String       @default("member")
 
   assignedFeedback             Feedback[]
+  feedbackComments             FeedbackComment[]
   gitHubInstallations          GitHubInstallation[]
   linearInstallationsInstalled LinearInstallation[]
   jiraInstallationsInstalled   JiraInstallation[]

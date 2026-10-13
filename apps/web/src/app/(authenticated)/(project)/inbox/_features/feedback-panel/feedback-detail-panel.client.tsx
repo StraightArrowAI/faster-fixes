@@ -11,6 +11,7 @@ import {
 import { format, formatDistanceToNow } from "date-fns";
 import { ExternalLink, ImageOff, VideoOff } from "lucide-react";
 import type { GetFeedbackColumnsOutput } from "@/app/(authenticated)/(project)/settings/_features/board-columns/get-feedback-columns.trpc.query";
+import { FeedbackCommentsSection } from "../comments/feedback-comments-section.client";
 import type { FeedbackItem } from "../get-feedback.trpc.query";
 import { AssigneeSelect } from "./assignee-select.client";
 import { CopyFeedbackMarkdown } from "./copy-feedback-markdown.client";
@@ -85,10 +86,11 @@ export function FeedbackDetailPanel({
             <CopyFeedbackMarkdown feedback={feedback} />
           </div>
 
-          {/* Comment */}
+          {/* The reviewer's text. Labelled "Report" so it is never confused
+              with the team's Comments thread below. */}
           <div>
             <h4 className="text-muted-foreground mb-1 text-xs font-medium uppercase">
-              Comment
+              Report
             </h4>
             <p className="text-sm leading-relaxed whitespace-pre-wrap">
               {feedback.comment}
@@ -246,6 +248,10 @@ export function FeedbackDetailPanel({
             feedbackId={feedback.id}
             value={feedback.assignee?.id ?? null}
           />
+
+          <Separator />
+
+          <FeedbackCommentsSection feedbackId={feedback.id} />
 
           <Separator />
 

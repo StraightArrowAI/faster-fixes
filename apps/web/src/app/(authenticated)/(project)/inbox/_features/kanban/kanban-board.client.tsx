@@ -17,6 +17,8 @@ import {
 import { cn } from "@workspace/ui/lib/utils";
 import * as React from "react";
 import { BulkActionToolbar } from "../actions-toolbar/bulk-action-toolbar.client";
+import { sharedSourceColumn } from "../comments/describe-move";
+import { usePromptMoveComment } from "../comments/move-comment-dialog.client";
 import { matchesEnvironmentFilter } from "../filters/matches-environment-filter";
 import type { FeedbackItem } from "../get-feedback.trpc.query";
 import { getBoardColumnId } from "./get-board-column-id";
@@ -29,6 +31,8 @@ import { KanbanMobile } from "./kanban-mobile.client";
 // the min forces scrolling only once every lane is at 16rem, and the max keeps
 // lanes from stretching on very wide screens (the row stays left-aligned).
 const COLUMN_SIZE = "min-w-64 max-w-96 flex-[1_1_0]";
+
+const ARCHIVED_LABEL = "Archived";
 
 type KanbanBoardProps = {
   feedback: FeedbackItem[];
@@ -69,6 +73,7 @@ export function KanbanBoard({
   onSelectFeedback,
 }: KanbanBoardProps) {
   const { bulkUpdateStatus, updateColumn } = useFeedbackMutations();
+  const promptMoveComment = usePromptMoveComment();
   const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set());
   const [activeId, setActiveId] = React.useState<string | null>(null);
 
@@ -133,9 +138,33 @@ export function KanbanBoard({
     const columnId = over.id as string;
 
     const item = feedback.find((f) => f.id === feedbackId);
-    if (!item || getBoardColumnId(item, columns) === columnId) return;
+    if (!item) return;
+    const fromColumnId = getBoardColumnId(item, columns);
+    if (fromColumnId === columnId) return;
 
-    updateColumn([feedbackId], columnId);
+    updateColumn([feedbackId], columnId, {
+      onSuccess: () =>
+        promptMoveComment({
+          feedbackIds: [feedbackId],
+          transition: {
+            from: columnName(fromColumnId),
+            to: columnName(columnId) ?? "",
+          },
+        }),
+    });
+  }
+
+  function columnName(columnId: string | null) {
+    return columns.find((c) => c.id === columnId)?.name ?? null;
+  }
+
+  function sourceColumnName(ids: string[]) {
+    return sharedSourceColumn(
+      ids.map((id) => {
+        const item = feedback.find((f) => f.id === id);
+        return item ? columnName(getBoardColumnId(item, columns)) : null;
+      }),
+    );
   }
 
   function handleDragCancel() {
@@ -174,14 +203,23 @@ export function KanbanBoard({
   function handleBulkMove(columnId: string) {
     const ids = Array.from(selectedIds);
     if (ids.length === 0) return;
-    updateColumn(ids, columnId);
+    const transition = {
+      from: sourceColumnName(ids),
+      to: columnName(columnId) ?? "",
+    };
+    updateColumn(ids, columnId, {
+      onSuccess: () => promptMoveComment({ feedbackIds: ids, transition }),
+    });
     setSelectedIds(new Set());
   }
 
   function handleBulkArchive() {
     const ids = Array.from(selectedIds);
     if (ids.length === 0) return;
-    bulkUpdateStatus(ids, "closed");
+    const transition = { from: sourceColumnName(ids), to: ARCHIVED_LABEL };
+    bulkUpdateStatus(ids, "closed", {
+      onSuccess: () => promptMoveComment({ feedbackIds: ids, transition }),
+    });
     setSelectedIds(new Set());
   }
 

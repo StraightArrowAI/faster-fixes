@@ -51,6 +51,15 @@ _Avoid_: Stage, Deployment.
 
 ### Feedback lifecycle
 
+**Report**:
+The Reviewer's own text on a Feedback (`Feedback.comment` in code). Labelled "Report" in the dashboard so it is never confused with a **Comment**.
+_Avoid_: Comment (for this field), Description.
+
+**Comment**:
+A note written by a dashboard team member on a Feedback (`FeedbackComment`), kept as an oldest-first thread. May record the column move it was written with. Never shown to Reviewers and never synced to trackers.
+_Avoid_: Note, Reply.
+
+
 **Status**:
 The state of a Feedback. Canonical values: `new`, `in_progress`, `resolved`, `archived`. Integrations, the widget, and notifications read Status, never Column.
 

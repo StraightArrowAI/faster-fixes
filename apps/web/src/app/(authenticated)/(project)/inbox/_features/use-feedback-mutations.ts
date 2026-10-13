@@ -135,19 +135,42 @@ export function useFeedbackMutations() {
     }),
   );
 
+  // onSuccess fires per call only after the server accepts the move, so the
+  // move-comment prompt never opens for a move that was rolled back.
   return {
-    updateStatus: (feedbackId: string, status: string) =>
-      updateStatus.mutate({
-        feedbackId,
-        status: status as "new" | "in_progress" | "resolved" | "closed",
-      }),
-    bulkUpdateStatus: (feedbackIds: string[], status: string) =>
-      bulkUpdateStatus.mutate({
-        feedbackIds,
-        status: status as "new" | "in_progress" | "resolved" | "closed",
-      }),
-    updateColumn: (feedbackIds: string[], columnId: string) =>
-      updateColumn.mutate({ feedbackIds, columnId }),
+    updateStatus: (
+      feedbackId: string,
+      status: string,
+      opts?: { onSuccess?: () => void },
+    ) =>
+      updateStatus.mutate(
+        {
+          feedbackId,
+          status: status as "new" | "in_progress" | "resolved" | "closed",
+        },
+        { onSuccess: opts?.onSuccess },
+      ),
+    bulkUpdateStatus: (
+      feedbackIds: string[],
+      status: string,
+      opts?: { onSuccess?: () => void },
+    ) =>
+      bulkUpdateStatus.mutate(
+        {
+          feedbackIds,
+          status: status as "new" | "in_progress" | "resolved" | "closed",
+        },
+        { onSuccess: opts?.onSuccess },
+      ),
+    updateColumn: (
+      feedbackIds: string[],
+      columnId: string,
+      opts?: { onSuccess?: () => void },
+    ) =>
+      updateColumn.mutate(
+        { feedbackIds, columnId },
+        { onSuccess: opts?.onSuccess },
+      ),
     updateAssignee: (feedbackId: string, assigneeId: string | null) =>
       updateAssignee.mutate({ feedbackId, assigneeId }),
   };

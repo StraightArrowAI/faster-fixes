@@ -11,7 +11,7 @@ import { GithubIcon } from "@workspace/ui/components/icons/github-icon";
 import { resolveS3Url } from "@/server/storage/resolve-s3-url";
 import { cn } from "@workspace/ui/lib/utils";
 import { formatDistanceToNow } from "date-fns";
-import { GripVertical } from "lucide-react";
+import { GripVertical, MessageSquare } from "lucide-react";
 import type { EnvironmentColorsInput } from "@/app/(authenticated)/(project)/_features/environment/environment-color.schema";
 import { EnvironmentBadge } from "@/app/(authenticated)/(project)/_features/environment/environment-badge";
 import type { FeedbackItem } from "../get-feedback.trpc.query";
@@ -132,6 +132,16 @@ function KanbanCardView({
 
           {feedback.issueLink && (
             <GithubIcon className="text-muted-foreground size-3.5 shrink-0" />
+          )}
+
+          {feedback.commentCount > 0 && (
+            <span
+              className="text-muted-foreground inline-flex shrink-0 items-center gap-0.5 text-xs tabular-nums"
+              aria-label={`${feedback.commentCount} ${feedback.commentCount === 1 ? "comment" : "comments"}`}
+            >
+              <MessageSquare className="size-3.5" />
+              {feedback.commentCount}
+            </span>
           )}
 
           <span className="text-muted-foreground ml-auto shrink-0 text-xs">

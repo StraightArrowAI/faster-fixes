@@ -22,6 +22,7 @@ import { AlertCircle, Archive, Inbox } from "lucide-react";
 import { parseAsString, useQueryState } from "nuqs";
 import * as React from "react";
 import { ArchiveTab } from "./archive/archive-tab.client";
+import { MoveCommentProvider } from "./comments/move-comment-dialog.client";
 import { FeedbackDetailPanel } from "./feedback-panel/feedback-detail-panel.client";
 import { EnvironmentFilter } from "./filters/environment-filter.client";
 import { FeedbackFilters } from "./filters/feedback-filters.client";
@@ -78,7 +79,9 @@ export function InboxTabs() {
   );
 
   const selectedFeedback = React.useMemo(
-    () => feedbackQuery.data?.items.find((f) => f.id === selectedFeedbackId) ?? null,
+    () =>
+      feedbackQuery.data?.items.find((f) => f.id === selectedFeedbackId) ??
+      null,
     [feedbackQuery.data, selectedFeedbackId],
   );
 
@@ -117,99 +120,101 @@ export function InboxTabs() {
   );
 
   return (
-    <div className="flex flex-col gap-4">
-      <Tabs value={view} onValueChange={setView}>
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <TabsList>
-            <TabsTrigger value="board">
-              <Inbox className="mr-1.5 size-4" />
-              Board
-            </TabsTrigger>
-            <TabsTrigger value="archive">
-              <Archive className="mr-1.5 size-4" />
-              Archive
-            </TabsTrigger>
-          </TabsList>
+    <MoveCommentProvider>
+      <div className="flex flex-col gap-4">
+        <Tabs value={view} onValueChange={setView}>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <TabsList>
+              <TabsTrigger value="board">
+                <Inbox className="mr-1.5 size-4" />
+                Board
+              </TabsTrigger>
+              <TabsTrigger value="archive">
+                <Archive className="mr-1.5 size-4" />
+                Archive
+              </TabsTrigger>
+            </TabsList>
 
-          {view === "board" && (
-            <FeedbackFilters
-              pageUrls={pageUrlsQuery.data ?? []}
-              selectedPageUrl={pageUrlFilter}
-              onPageUrlChange={setPageUrlFilter}
-              environments={environmentsQuery.data ?? []}
-              selectedEnvironment={envFilter}
-              onEnvironmentChange={setEnvFilter}
-              sort={sort}
-              onSortChange={setSort}
-            />
-          )}
+            {view === "board" && (
+              <FeedbackFilters
+                pageUrls={pageUrlsQuery.data ?? []}
+                selectedPageUrl={pageUrlFilter}
+                onPageUrlChange={setPageUrlFilter}
+                environments={environmentsQuery.data ?? []}
+                selectedEnvironment={envFilter}
+                onEnvironmentChange={setEnvFilter}
+                sort={sort}
+                onSortChange={setSort}
+              />
+            )}
 
-          {view === "archive" && (
-            <EnvironmentFilter
-              environments={environmentsQuery.data ?? []}
-              selectedEnvironment={envFilter}
-              onEnvironmentChange={setEnvFilter}
-            />
-          )}
-        </div>
+            {view === "archive" && (
+              <EnvironmentFilter
+                environments={environmentsQuery.data ?? []}
+                selectedEnvironment={envFilter}
+                onEnvironmentChange={setEnvFilter}
+              />
+            )}
+          </div>
 
-        <TabsContent value="board" className="mt-4">
-          {matchQueryStatus(feedbackQuery, {
-            dataKey: "items",
-            Loading: boardLoading,
-            Errored: boardErrored,
-            Empty: (
-              <Empty>
-                <EmptyHeader>
-                  <EmptyMedia variant="icon">
-                    <Inbox />
-                  </EmptyMedia>
-                  <EmptyTitle>No feedback yet</EmptyTitle>
-                  <EmptyDescription>
-                    Feedback submitted by reviewers will appear here.
-                  </EmptyDescription>
-                </EmptyHeader>
-              </Empty>
-            ),
-            Success: ({ data: { items: feedback, environmentColors } }) =>
-              matchQueryStatus(columnsQuery, {
-                Loading: boardLoading,
-                Errored: boardErrored,
-                // Every project has columns (seeded on create), so an empty
-                // list means something is wrong rather than a fresh board.
-                Empty: boardErrored,
-                Success: ({ data: columns }) => (
-                  <KanbanBoard
-                    feedback={feedback}
-                    columns={columns}
-                    environmentColors={environmentColors}
-                    pageUrlFilter={pageUrlFilter}
-                    envFilter={envFilter}
-                    sort={sort}
-                    onSelectFeedback={(id) => setSelectedFeedbackId(id)}
-                  />
-                ),
-              }),
-          })}
-        </TabsContent>
+          <TabsContent value="board" className="mt-4">
+            {matchQueryStatus(feedbackQuery, {
+              dataKey: "items",
+              Loading: boardLoading,
+              Errored: boardErrored,
+              Empty: (
+                <Empty>
+                  <EmptyHeader>
+                    <EmptyMedia variant="icon">
+                      <Inbox />
+                    </EmptyMedia>
+                    <EmptyTitle>No feedback yet</EmptyTitle>
+                    <EmptyDescription>
+                      Feedback submitted by reviewers will appear here.
+                    </EmptyDescription>
+                  </EmptyHeader>
+                </Empty>
+              ),
+              Success: ({ data: { items: feedback, environmentColors } }) =>
+                matchQueryStatus(columnsQuery, {
+                  Loading: boardLoading,
+                  Errored: boardErrored,
+                  // Every project has columns (seeded on create), so an empty
+                  // list means something is wrong rather than a fresh board.
+                  Empty: boardErrored,
+                  Success: ({ data: columns }) => (
+                    <KanbanBoard
+                      feedback={feedback}
+                      columns={columns}
+                      environmentColors={environmentColors}
+                      pageUrlFilter={pageUrlFilter}
+                      envFilter={envFilter}
+                      sort={sort}
+                      onSelectFeedback={(id) => setSelectedFeedbackId(id)}
+                    />
+                  ),
+                }),
+            })}
+          </TabsContent>
 
-        <TabsContent value="archive" className="mt-4">
-          <ArchiveTab envFilter={envFilter} />
-        </TabsContent>
-      </Tabs>
+          <TabsContent value="archive" className="mt-4">
+            <ArchiveTab envFilter={envFilter} />
+          </TabsContent>
+        </Tabs>
 
-      <FeedbackDetailPanel
-        feedback={selectedFeedback}
-        open={!!selectedFeedbackId}
-        onOpenChange={(open) => {
-          if (!open) setSelectedFeedbackId(null);
-        }}
-        projectId={projectId}
-        columns={columnsQuery.data ?? []}
-        hasGitHubLink={!!gitHubLinkQuery.data}
-        hasLinearLink={!!linearLinkQuery.data}
-        hasJiraLink={!!jiraLinkQuery.data}
-      />
-    </div>
+        <FeedbackDetailPanel
+          feedback={selectedFeedback}
+          open={!!selectedFeedbackId}
+          onOpenChange={(open) => {
+            if (!open) setSelectedFeedbackId(null);
+          }}
+          projectId={projectId}
+          columns={columnsQuery.data ?? []}
+          hasGitHubLink={!!gitHubLinkQuery.data}
+          hasLinearLink={!!linearLinkQuery.data}
+          hasJiraLink={!!jiraLinkQuery.data}
+        />
+      </div>
+    </MoveCommentProvider>
   );
 }

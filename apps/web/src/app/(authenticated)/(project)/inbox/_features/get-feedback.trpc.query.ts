@@ -78,6 +78,7 @@ export const getFeedback = protectedProcedure
             issueStatusCategory: true,
           },
         },
+        _count: { select: { comments: true } },
       },
     });
 
@@ -119,6 +120,7 @@ export const getFeedback = protectedProcedure
         issueLink: f.issueLink,
         linearIssueLink: f.linearIssueLink,
         jiraIssueLink: f.jiraIssueLink,
+        commentCount: f._count.comments,
       })),
     );
 

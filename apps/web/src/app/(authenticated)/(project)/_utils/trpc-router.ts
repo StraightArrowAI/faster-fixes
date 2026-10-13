@@ -13,6 +13,11 @@ import { getDistinctEnvironments } from "../inbox/_features/filters/get-distinct
 import { getDistinctPageUrls } from "../inbox/_features/filters/get-distinct-page-urls.trpc.query";
 import { getFeedbackDiagnostics } from "../inbox/_features/feedback-panel/get-feedback-diagnostics.trpc.query";
 import { getFeedback } from "../inbox/_features/get-feedback.trpc.query";
+import { bulkCreateFeedbackComments } from "../inbox/_features/comments/bulk-create-feedback-comments.trpc.mutation";
+import { createFeedbackComment } from "../inbox/_features/comments/create-feedback-comment.trpc.mutation";
+import { deleteFeedbackComment } from "../inbox/_features/comments/delete-feedback-comment.trpc.mutation";
+import { getFeedbackComments } from "../inbox/_features/comments/get-feedback-comments.trpc.query";
+import { updateFeedbackComment } from "../inbox/_features/comments/update-feedback-comment.trpc.mutation";
 import { createReviewer } from "../reviewers/_features/create/create-reviewer.trpc.mutation";
 import { deleteReviewer } from "../reviewers/_features/delete/delete-reviewer.trpc.mutation";
 import { getReviewers } from "../reviewers/_features/get-reviewers.trpc.query";
@@ -102,6 +107,13 @@ export const projectsRouter = router({
     createIssue: createIssueForFeedback,
     createLinearIssue: createLinearIssueForFeedback,
     createJiraIssue: createJiraIssueForFeedback,
+    comments: router({
+      list: getFeedbackComments,
+      create: createFeedbackComment,
+      bulkCreate: bulkCreateFeedbackComments,
+      update: updateFeedbackComment,
+      delete: deleteFeedbackComment,
+    }),
   }),
   github: router({
     getLink: getProjectGitHubLink,

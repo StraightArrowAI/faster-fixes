@@ -134,10 +134,38 @@ model Feedback {
   jiraIssueLink   FeedbackJiraIssueLink?
   slackMessage    FeedbackSlackMessage?
 
+  comments FeedbackComment[]
+
   @@index([projectId])
   @@index([reviewerId])
   @@index([assigneeId])
   @@map("feedback")
+}
+
+// Team-only discussion on a Feedback; reviewers never see it and it is never
+// synced to trackers. Distinct from Feedback.comment (the reviewer's report).
+model FeedbackComment {
+  id        String    @id @default(uuid())
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  editedAt  DateTime?
+
+  feedbackId String
+  feedback   Feedback @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
+  // SetNull keeps the thread readable after a member leaves ("Former member").
+  authorId   String?
+  author     Member?  @relation(fields: [authorId], references: [id], onDelete: SetNull)
+
+  body String
+
+  // Column names frozen at write time so renaming or deleting a column never
+  // rewrites history. Both null for a plain comment.
+  fromColumnName String?
+  toColumnName   String?
+
+  @@index([feedbackId, createdAt])
+  @@index([authorId])
+  @@map("feedback_comment")
 }
 
 // A per-Project kanban lane layered over Feedback.status (ADR-0010). Category is
