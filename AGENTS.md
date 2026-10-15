@@ -14,6 +14,13 @@
 - User-facing UI copy: English only. Professional, clear, and concise — match the tone of serious developer tools (e.g., Vercel, Linear, Stripe). No marketing fluff, no casual language, no exclamation marks. Prefer precise, understated wording.
 - All `unstable_cache` usage must include `cacheTags` from `@/server/cache/cache-tags`.
 
+## MCP server (`packages/mcp`)
+
+- `@fasterfixes/mcp` on npm is upstream's package; this fork never publishes there. Our server is `packages/mcp` in this repo, and its API is `apps/web/src/app/api/v1/agent`, which deploys with the app.
+- Local agents (e.g. the RMS project's `faster-fixes-*` servers) run this repo's build through a host install linked to `packages/mcp`. `dist/` is gitignored, so after any change to `packages/mcp` run `pnpm --filter @fasterfixes/mcp build`; agents pick it up on their next MCP restart.
+- When a tool changes, update `packages/mcp/README.md`, `packages/mcp/CHANGELOG.md` (bump the version in `package.json` and `src/index.ts`), `apps/web/src/content/docs/mcp/tools.mdx`, the agent API docs, and `.agents/skills/fix-feedback/SKILL.md`.
+- Ship API changes before or with the tools that call them: a tool that calls an undeployed endpoint fails with 404.
+
 ## Code comments
 
 - Comments exist to capture **decisions**, not describe code. A dev returning in 6 months should understand _why_ the code is this way, not _what_ it does.

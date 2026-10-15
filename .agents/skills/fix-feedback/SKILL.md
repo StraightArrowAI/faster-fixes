@@ -10,7 +10,7 @@ Process and fix client feedback collected by the Faster Fixes widget. This skill
 
 ## Prerequisites
 
-The Faster Fixes MCP server (`@fasterfixes/mcp`) must be configured with valid `FASTER_FIXES_TOKEN` and `FASTER_FIXES_PROJECT` environment variables. If the MCP tools (`list_feedbacks`, `update_feedback_status`) are not available, tell the user to set up the MCP server first and link them to https://faster-fixes.com/docs.
+The Faster Fixes MCP server (`@fasterfixes/mcp`) must be configured with valid `FASTER_FIXES_TOKEN` and `FASTER_FIXES_PROJECT` environment variables. If the MCP tools (`list_feedbacks`, `update_feedback_status`, `move_feedback`, `list_comments`) are not available, tell the user to set up the MCP server first and link them to https://faster-fixes.com/docs.
 
 ## Deciding the mode
 
@@ -40,7 +40,7 @@ If there are no new feedbacks, inform the user and stop.
 
 For each feedback item, follow this sequence:
 
-1. **Mark as in progress** — Call `update_feedback_status` with `status: "in_progress"` so other team members know it's being handled. This is important for team coordination — don't skip it.
+1. **Mark as in progress** — Call `update_feedback_status` with `status: "in_progress"` so other team members know it's being handled. This is important for team coordination — don't skip it. If the item shows **Team comments**, call `list_comments` first: the team often records reproduction notes or earlier attempts there.
 
 2. **Understand the issue** — Read the structured markdown report. Every report includes some combination of:
    - **Comment**: What the client described (may be vague — clients are non-technical)
@@ -55,7 +55,7 @@ For each feedback item, follow this sequence:
 
 4. **Fix the issue** — Apply the minimal, scoped fix that addresses the client's feedback. Don't refactor surrounding code or add unrelated improvements.
 
-5. **Mark as resolved** — Call `update_feedback_status` with `status: "resolved"`.
+5. **Close out** — Record what you did as a comment in the same call. If the project has a review lane (call `list_columns`; e.g. "Test" or "In Test"), call `move_feedback` with that column and a `comment`; otherwise call `update_feedback_status` with `status: "resolved"` and a `comment`. The comment says what was wrong, what changed, and where (files), in two or three sentences. If the token lacks the "Add comments" permission, the call fails with 403 and nothing changes: retry without `comment` and mention it in the summary.
 
 ### Step 3: Summarize
 
@@ -72,7 +72,7 @@ Not every feedback can or should be fixed inline. Skip and leave the status unch
 - **It's a large feature request** — things like "add animations", "redesign this section", or "build a new page" require design decisions and assets that can't be inferred from the feedback. Flag these for manual handling.
 - **It requires external dependencies** — new packages, API integrations, or third-party services that aren't already in the project.
 
-For skipped items, explain why in the summary so the user can triage them manually.
+For skipped items, explain why in the summary so the user can triage them manually, and leave a short `add_comment` on the item saying why it was skipped.
 
 ## Processing order
 
