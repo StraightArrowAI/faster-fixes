@@ -18,10 +18,18 @@ The token is prefixed with `ff_agent_` for easy identification.
 
 Each token has fine-grained permissions:
 
-| Scope | Permission |
-|-------|-----------|
-| `feedbacks:read` | List and read feedback items |
-| `feedbacks:update_status` | Update feedback status (new, in_progress, resolved, closed) |
+| Scope | Dashboard label | Permission |
+|-------|-----------------|-----------|
+| `feedbacks:read` | Read feedbacks | List feedback items, board columns, and team comments |
+| `feedbacks:update_status` | Update feedback status and column | Update feedback status (new, in_progress, resolved, closed) and move feedback between board columns |
+| `feedbacks:comment` | Add comments | Add team comments, including a closeout comment with a status change or column move |
+| `feedbacks:create` | Create feedbacks | Import feedback items |
+
+New tokens default to `feedbacks:read`, `feedbacks:update_status`, and `feedbacks:comment`.
+
+Scopes are fixed when a token is created. Existing tokens are not granted `feedbacks:comment` automatically: to let an agent comment, create a new token with **Add comments** checked. A status change or column move that includes a comment without this scope returns `403` and changes nothing.
+
+Agent comments appear in the dashboard under the token's name with an **Agent** badge. They cannot be edited; owners and admins can delete them.
 
 ## Rate limits
 

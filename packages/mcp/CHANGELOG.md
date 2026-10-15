@@ -1,5 +1,14 @@
 # @fasterfixes/mcp
 
+## 0.0.6
+
+- `list_columns` tool: the project's board columns in board order, with each column's status.
+- `move_feedback` tool: move a feedback item to a column by name (case-insensitive) or ID, with an optional comment. An unknown column name returns the valid names.
+- `list_comments` and `add_comment` tools: read and add to a feedback item's team comment thread. Adding a comment needs a token with the "Add comments" permission (`feedbacks:comment`).
+- `update_feedback_status` accepts an optional `comment`, saved as a closeout note with the status change.
+- `list_feedbacks` returns each item's column, tags, assignee and comment count, and filters by `env` and `column`.
+- The server reports its real version instead of 0.0.1.
+
 ## 0.0.5
 
 - `list_feedbacks` tool description now states that captured console logs and network requests (the Diagnostic Trail) are included in the returned feedback. No behavioral change — the trail already flows through from the agent API; this just makes it discoverable to the calling agent.

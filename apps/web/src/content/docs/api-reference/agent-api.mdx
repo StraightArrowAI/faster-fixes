@@ -1,6 +1,6 @@
 ---
 title: Agent API
-description: REST API for AI agents to list feedback and update status.
+description: REST API for AI agents to list feedback, move it between board columns, and read and add team comments.
 ---
 
 The Agent API is designed for programmatic access by AI coding agents. It's the same API used by the [MCP server](/docs/mcp/setup).
@@ -17,6 +17,20 @@ Authorization: Bearer ff_agent_xxx
 
 Create agent tokens in [Integrations](https://faster-fixes.com/integrations). See [Agent Tokens](/docs/concepts/agent-tokens) for details.
 
+## Errors
+
+Errors return a JSON body with a message and a machine-readable code:
+
+```json
+{
+  "error": "Column not found",
+  "code": "COLUMN_NOT_FOUND",
+  "columns": ["New", "In Progress", "In Test", "Resolved"]
+}
+```
+
+`COLUMN_NOT_FOUND` (404) includes the project's valid column names in `columns`, so an agent can correct its request in one retry.
+
 ---
 
 ## List feedbacks
@@ -27,12 +41,14 @@ GET /feedbacks?project=proj_xxx
 
 ### Query parameters
 
-| Parameter  | Type     | Required | Description                                        |
-| ---------- | -------- | -------- | -------------------------------------------------- |
-| `project`  | `string` | Yes      | Project ID (prefix: `proj_`)                       |
-| `status`   | `string` | No       | Filter: `new`, `in_progress`, `resolved`, `closed` |
-| `page_url` | `string` | No       | Filter by page URL                                 |
-| `format`   | `string` | No       | `json` (default) or `markdown`                     |
+| Parameter  | Type     | Required | Description                                                                                   |
+| ---------- | -------- | -------- | --------------------------------------------------------------------------------------------- |
+| `project`  | `string` | Yes      | Project ID (prefix: `proj_`)                                                                  |
+| `status`   | `string` | No       | Filter: `new`, `in_progress`, `resolved`, `closed`                                            |
+| `page_url` | `string` | No       | Filter by page URL                                                                            |
+| `env`      | `string` | No       | Filter by the `env` tag, e.g. `dev` or `prod`. Use `none` for feedback without an `env` tag   |
+| `column`   | `string` | No       | Filter by board column name (case-insensitive) or ID. Unknown columns return `COLUMN_NOT_FOUND` |
+| `format`   | `string` | No       | `json` (default) or `markdown`                                                                |
 
 ### JSON response
 
@@ -42,6 +58,10 @@ GET /feedbacks?project=proj_xxx
     {
       "id": "uuid",
       "status": "new",
+      "column": { "id": "uuid", "name": "New" },
+      "tags": { "env": "prod" },
+      "assignee": { "name": "Alex" },
+      "commentCount": 2,
       "comment": "The spacing between these buttons is too large",
       "pageUrl": "https://myapp.com/settings",
       "selector": "[data-testid=\"save-btn\"]",
@@ -70,9 +90,95 @@ GET /feedbacks?project=proj_xxx
 }
 ```
 
+| Field          | Description                                                                        |
+| -------------- | ---------------------------------------------------------------------------------- |
+| `column`       | The board column the feedback sits in. `null` when the feedback is archived        |
+| `tags`         | Key/value tags on the feedback. `env` is the environment                           |
+| `assignee`     | The assigned team member, or `null`                                                |
+| `commentCount` | Number of team comments. Read them with [List comments](#list-comments)            |
+
 ### Markdown response
 
-When `format=markdown`, the response is a structured markdown document with sections for each feedback item, ready for AI agent consumption.
+When `format=markdown`, the response is a structured markdown document with sections for each feedback item, ready for AI agent consumption. Each item includes **Column**, **Tags**, and **Team comments** lines when they apply.
+
+---
+
+## List columns
+
+```
+GET /columns?project=proj_xxx
+```
+
+Returns the project's board columns in board order. A project can have several columns per status, such as "In Progress" and "In Test".
+
+### Query parameters
+
+| Parameter | Type     | Required | Description                  |
+| --------- | -------- | -------- | ---------------------------- |
+| `project` | `string` | Yes      | Project ID (prefix: `proj_`) |
+
+### Response
+
+```json
+{
+  "columns": [
+    { "id": "uuid", "name": "New", "status": "new", "position": 0 },
+    { "id": "uuid", "name": "In Progress", "status": "in_progress", "position": 1 },
+    { "id": "uuid", "name": "In Test", "status": "in_progress", "position": 2 },
+    { "id": "uuid", "name": "Resolved", "status": "resolved", "position": 3 }
+  ]
+}
+```
+
+`status` is the status a feedback item takes when it moves into the column.
+
+---
+
+## Move feedback to a column
+
+```
+POST /feedbacks/:id/column
+Content-Type: application/json
+```
+
+### Body
+
+```json
+{
+  "column": "In Test",
+  "comment": "Fixed the button spacing in settings-form.tsx."
+}
+```
+
+### Parameters
+
+| Field     | Type     | Required | Description                                                                              |
+| --------- | -------- | -------- | ---------------------------------------------------------------------------------------- |
+| `column`  | `string` | Yes      | Column name (case-insensitive) or ID, within the feedback's project                      |
+| `comment` | `string` | No       | A note for the team, 1–5000 characters. Requires the `feedbacks:comment` scope            |
+
+### Response
+
+```json
+{
+  "id": "uuid",
+  "status": "in_progress",
+  "column": { "id": "uuid", "name": "In Test" },
+  "updatedAt": "2025-01-15T11:00:00Z",
+  "comment": { "id": "uuid" }
+}
+```
+
+`comment` is `null` when no comment was sent.
+
+### Behavior
+
+- The feedback takes the column's status.
+- Moving archived feedback to a column un-archives it.
+- Moving to the column the feedback is already in changes nothing, but the comment is still saved.
+- The comment records the move from the previous column to the new one.
+- Linked integrations (GitHub issues, Slack) are notified only when the status actually changes.
+- An unknown column returns `404 COLUMN_NOT_FOUND` with the valid names in `columns`.
 
 ---
 
@@ -87,15 +193,17 @@ Content-Type: application/json
 
 ```json
 {
-  "status": "resolved"
+  "status": "resolved",
+  "comment": "Fixed in settings-form.tsx; the gap now uses the spacing token."
 }
 ```
 
 ### Parameters
 
-| Field    | Type     | Required | Description                                   |
-| -------- | -------- | -------- | --------------------------------------------- |
-| `status` | `string` | Yes      | `new`, `in_progress`, `resolved`, or `closed` |
+| Field     | Type     | Required | Description                                                                   |
+| --------- | -------- | -------- | ----------------------------------------------------------------------------- |
+| `status`  | `string` | Yes      | `new`, `in_progress`, `resolved`, or `closed`                                 |
+| `comment` | `string` | No       | A note for the team, 1–5000 characters. Requires the `feedbacks:comment` scope |
 
 ### Response
 
@@ -103,24 +211,111 @@ Content-Type: application/json
 {
   "id": "uuid",
   "status": "resolved",
-  "updatedAt": "2025-01-15T11:00:00Z"
+  "column": { "id": "uuid", "name": "Resolved" },
+  "updatedAt": "2025-01-15T11:00:00Z",
+  "comment": { "id": "uuid" }
 }
 ```
+
+Changing the status places the feedback in the first column of the new status; re-sending the current status leaves it in place. To target a specific column, use [Move feedback to a column](#move-feedback-to-a-column). `column` is `null` when the feedback is archived (`closed`), and `comment` is `null` when no comment was sent.
 
 If a GitHub issue is linked, the status change is automatically synced.
 
 ---
 
+## List comments
+
+```
+GET /feedbacks/:id/comments
+```
+
+Returns the team's comment thread on a feedback item, oldest first. Comments are written by team members and agents, never by the reviewer who reported the issue.
+
+### Response
+
+```json
+{
+  "comments": [
+    {
+      "id": "uuid",
+      "body": "Only reproducible on Safari.",
+      "createdAt": "2025-01-15T10:45:00Z",
+      "editedAt": null,
+      "author": { "type": "member", "name": "Alex" },
+      "fromColumn": null,
+      "toColumn": null
+    },
+    {
+      "id": "uuid",
+      "body": "Fixed the button spacing in settings-form.tsx.",
+      "createdAt": "2025-01-15T11:00:00Z",
+      "editedAt": null,
+      "author": { "type": "agent", "name": "Claude Code" },
+      "fromColumn": "In Progress",
+      "toColumn": "In Test"
+    }
+  ]
+}
+```
+
+| Field                      | Description                                                                                         |
+| -------------------------- | --------------------------------------------------------------------------------------------------- |
+| `author.type`              | `member`, `agent` (named after the agent token), or `former_member` (a member who left the organization) |
+| `fromColumn`, `toColumn`   | Set when the comment was left with a move or status change. `toColumn` is `Archived` for `closed`    |
+
+---
+
+## Add a comment
+
+```
+POST /feedbacks/:id/comments
+Content-Type: application/json
+```
+
+### Body
+
+```json
+{
+  "body": "The spacing comes from a shared layout; needs a design decision."
+}
+```
+
+### Parameters
+
+| Field  | Type     | Required | Description                                  |
+| ------ | -------- | -------- | -------------------------------------------- |
+| `body` | `string` | Yes      | Comment text, 1–5000 characters (trimmed)    |
+
+### Response
+
+Returns `201 Created` with the comment, in the same shape as [List comments](#list-comments).
+
+Agent comments appear in the dashboard under the token's name with an **Agent** badge. They cannot be edited; owners and admins can delete them.
+
+---
+
 ## Rate limits
 
-| Action         | Limit             |
-| -------------- | ----------------- |
-| List feedbacks | 200 requests/hour |
-| Update status  | 50 requests/hour  |
+| Action                  | Limit             |
+| ----------------------- | ----------------- |
+| List feedbacks          | 200 requests/hour |
+| List columns            | 200 requests/hour |
+| List comments           | 200 requests/hour |
+| Update status           | 50 requests/hour  |
+| Move to column          | 50 requests/hour  |
+| Add comment             | 50 requests/hour  |
+
+Read endpoints share the read limit and write endpoints share the write limit. A move or status change with a comment counts as one request.
 
 ## Required scopes
 
-| Endpoint                     | Scope                     |
-| ---------------------------- | ------------------------- |
-| `GET /feedbacks`             | `feedbacks:read`          |
-| `POST /feedbacks/:id/status` | `feedbacks:update_status` |
+| Endpoint                       | Scope                     |
+| ------------------------------ | ------------------------- |
+| `GET /feedbacks`               | `feedbacks:read`          |
+| `GET /columns`                 | `feedbacks:read`          |
+| `GET /feedbacks/:id/comments`  | `feedbacks:read`          |
+| `POST /feedbacks/:id/status`   | `feedbacks:update_status` |
+| `POST /feedbacks/:id/column`   | `feedbacks:update_status` |
+| `POST /feedbacks/:id/comments` | `feedbacks:comment`       |
+
+Sending `comment` with a status change or column move also requires `feedbacks:comment`. Without it, the request returns `403` and nothing is changed.

@@ -41,3 +41,5 @@ export const FeedbackItemSchema = z.object({
       "Arbitrary key/value pairs from the source tool (e.g. originalId, tags)",
     ),
 });
+
+export const CommentBodySchema = z.string().trim().min(1).max(5000);

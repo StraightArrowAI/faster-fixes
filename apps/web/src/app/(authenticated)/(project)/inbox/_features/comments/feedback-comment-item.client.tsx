@@ -24,7 +24,8 @@ import {
   DropdownMenuTrigger,
 } from "@workspace/ui/components/dropdown-menu";
 import { format, formatDistanceToNow } from "date-fns";
-import { ArrowRight, MoreHorizontal } from "lucide-react";
+import { Badge } from "@workspace/ui/components/badge";
+import { ArrowRight, Bot, MoreHorizontal } from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";
 import { CommentBodyForm } from "./comment-body-form.client";
@@ -40,28 +41,40 @@ export function FeedbackCommentItem({ comment }: FeedbackCommentItemProps) {
   const [isEditing, setIsEditing] = React.useState(false);
   const [confirmDelete, setConfirmDelete] = React.useState(false);
 
-  const authorName = comment.author?.name ?? "Former member";
+  const { author } = comment;
   const createdAt = new Date(comment.createdAt);
 
   return (
     <li className="flex gap-2.5">
-      <Avatar className="mt-0.5 size-6">
-        <AvatarImage
-          src={
-            comment.author?.image
-              ? resolveS3Url(comment.author.image)
-              : undefined
-          }
-          className="object-cover"
-        />
-        <AvatarFallback className="text-[10px]">
-          {comment.author?.name?.charAt(0)?.toUpperCase() ?? "?"}
-        </AvatarFallback>
-      </Avatar>
+      {author.type === "agent" ? (
+        <div className="bg-muted text-muted-foreground mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full">
+          <Bot className="size-3.5" />
+        </div>
+      ) : (
+        <Avatar className="mt-0.5 size-6">
+          <AvatarImage
+            src={author.image ? resolveS3Url(author.image) : undefined}
+            className="object-cover"
+          />
+          <AvatarFallback className="text-[10px]">
+            {(author.type === "member" &&
+              author.name.charAt(0).toUpperCase()) ||
+              "?"}
+          </AvatarFallback>
+        </Avatar>
+      )}
 
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5 text-xs">
-          <span className="truncate font-medium">{authorName}</span>
+          <span className="truncate font-medium">{author.name}</span>
+          {author.type === "agent" && (
+            <Badge
+              variant="secondary"
+              className="h-4 shrink-0 px-1 text-[10px]"
+            >
+              Agent
+            </Badge>
+          )}
           <time
             dateTime={createdAt.toISOString()}
             title={format(createdAt, "MMM d, yyyy, h:mm a")}

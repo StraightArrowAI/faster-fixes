@@ -1,5 +1,9 @@
 "use server";
 
+import {
+  COMMENT_AUTHOR_INCLUDE,
+  describeCommentAuthor,
+} from "@/server/feedback/comment-author";
 import { protectedProcedure } from "@/server/trpc/trpc";
 import { inferProcedureOutput } from "@trpc/server";
 import { canDeleteComment, canEditComment } from "./comment-permissions";
@@ -21,14 +25,7 @@ export const getFeedbackComments = protectedProcedure
     const comments = await prisma.feedbackComment.findMany({
       where: { feedbackId: input.feedbackId },
       orderBy: { createdAt: "asc" },
-      include: {
-        author: {
-          select: {
-            id: true,
-            user: { select: { name: true, email: true, image: true } },
-          },
-        },
-      },
+      include: COMMENT_AUTHOR_INCLUDE,
     });
 
     return comments.map((c) => ({
@@ -38,13 +35,7 @@ export const getFeedbackComments = protectedProcedure
       body: c.body,
       fromColumnName: c.fromColumnName,
       toColumnName: c.toColumnName,
-      author: c.author
-        ? {
-            id: c.author.id,
-            name: c.author.user.name || c.author.user.email,
-            image: c.author.user.image,
-          }
-        : null,
+      author: describeCommentAuthor(c),
       canEdit: canEditComment(c, viewer),
       canDelete: canDeleteComment(c, viewer),
     }));

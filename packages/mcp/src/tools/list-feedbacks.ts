@@ -12,7 +12,7 @@ export function registerListFeedbacks(
     {
       title: "List Feedbacks",
       description:
-        "List feedback items from Faster Fixes. Returns client feedback with page URL, CSS selector, click coordinates, viewport info, browser details, screenshot, an optional screen recording of the sequence that produced the defect, and the console logs and network requests captured before submission. Use format=markdown for agent-readable output. Workflow: list feedbacks → fix the issues in code → update status to resolved.",
+        "List feedback items from Faster Fixes. Returns client feedback with its board column, tags (env is the environment), assignee, team comment count, page URL, CSS selector, click coordinates, viewport info, browser details, screenshot, an optional screen recording of the sequence that produced the defect, and the console logs and network requests captured before submission. Use format=markdown for agent-readable output. Workflow: list feedbacks → read list_comments when commentCount > 0 → fix the issues in code → move_feedback or update_feedback_status with a closeout comment.",
       inputSchema: {
         status: FeedbackStatusEnum.optional().describe(
           "Filter by feedback status",
@@ -22,6 +22,16 @@ export function registerListFeedbacks(
           .url()
           .optional()
           .describe("Filter by the page URL where feedback was submitted"),
+        env: z
+          .string()
+          .optional()
+          .describe(
+            "Filter by environment tag, e.g. 'dev' or 'prod'. Use 'none' for items without one",
+          ),
+        column: z
+          .string()
+          .optional()
+          .describe("Filter by board column name (case-insensitive) or ID"),
         format: z
           .enum(["json", "markdown"])
           .optional()
@@ -29,9 +39,15 @@ export function registerListFeedbacks(
           .describe("Response format. Use markdown for readable output"),
       },
     },
-    async ({ status, page_url, format }) => {
+    async ({ status, page_url, env, column, format }) => {
       try {
-        const result = await client.listFeedbacks({ status, page_url, format });
+        const result = await client.listFeedbacks({
+          status,
+          page_url,
+          env,
+          column,
+          format,
+        });
 
         if (typeof result === "string") {
           return { content: [{ type: "text" as const, text: result }] };

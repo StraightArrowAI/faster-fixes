@@ -86,6 +86,8 @@ model AgentToken {
   lastUsedAt DateTime?
   revokedAt  DateTime?
 
+  feedbackComments FeedbackComment[]
+
   @@index([organizationId])
   @@index([tokenHash])
   @@map("agent_token")

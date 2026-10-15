@@ -19,12 +19,23 @@ import { Label } from "@workspace/ui/components/label";
 import { Check, Copy, Plus } from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";
+import type { CreateAgentTokenInput } from "./create-agent-token.schema";
 
 const AVAILABLE_SCOPES = [
   { value: "feedbacks:read", label: "Read feedbacks" },
-  { value: "feedbacks:update_status", label: "Update feedback status" },
+  {
+    value: "feedbacks:update_status",
+    label: "Update feedback status and column",
+  },
+  { value: "feedbacks:comment", label: "Add comments" },
   { value: "feedbacks:create", label: "Create feedbacks" },
 ] as const;
+
+const DEFAULT_SCOPES = [
+  "feedbacks:read",
+  "feedbacks:update_status",
+  "feedbacks:comment",
+];
 
 export function CreateAgentTokenDialog() {
   const trpc = useTRPC();
@@ -33,10 +44,7 @@ export function CreateAgentTokenDialog() {
 
   const [open, setOpen] = React.useState(false);
   const [name, setName] = React.useState("");
-  const [scopes, setScopes] = React.useState<string[]>([
-    "feedbacks:read",
-    "feedbacks:update_status",
-  ]);
+  const [scopes, setScopes] = React.useState<string[]>(DEFAULT_SCOPES);
   const [rawToken, setRawToken] = React.useState<string | null>(null);
   const [copied, setCopied] = React.useState(false);
 
@@ -56,11 +64,7 @@ export function CreateAgentTokenDialog() {
     createToken.mutate({
       organizationId: activeOrg.id,
       name: name.trim(),
-      scopes: scopes as (
-        | "feedbacks:read"
-        | "feedbacks:update_status"
-        | "feedbacks:create"
-      )[],
+      scopes: scopes as CreateAgentTokenInput["scopes"],
     });
   };
 
@@ -82,7 +86,7 @@ export function CreateAgentTokenDialog() {
         });
       }
       setName("");
-      setScopes(["feedbacks:read", "feedbacks:update_status"]);
+      setScopes(DEFAULT_SCOPES);
       setRawToken(null);
       setCopied(false);
     }

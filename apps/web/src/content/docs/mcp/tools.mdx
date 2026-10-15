@@ -1,9 +1,16 @@
 ---
 title: Tools
-description: "Reference for MCP tools: list_feedbacks and update_feedback_status."
+description: "Reference for MCP tools: list_feedbacks, list_columns, move_feedback, update_feedback_status, list_comments, and add_comment."
 ---
 
-The MCP server exposes two tools.
+The MCP server exposes the following tools for working through feedback.
+
+## Recommended workflow
+
+1. `list_feedbacks` to fetch the items to work on.
+2. `list_comments` for any item with a `commentCount` above 0, to read the team's context.
+3. Fix the issue in code.
+4. `move_feedback` (or `update_feedback_status`) with a `comment` that tells the team what was fixed and where.
 
 ## `list_feedbacks`
 
@@ -15,6 +22,8 @@ Lists feedback items for your project with optional filtering.
 |-----------|------|----------|-------------|
 | `status` | `string` | No | Filter by status: `new`, `in_progress`, `resolved`, or `closed` |
 | `page_url` | `string` | No | Filter by page URL where feedback was submitted |
+| `env` | `string` | No | Filter by environment tag, e.g. `dev` or `prod`. Use `none` for items without one |
+| `column` | `string` | No | Filter by board column name (case-insensitive) or ID |
 | `format` | `string` | No | Output format: `markdown` (default) or `json` |
 
 ### Example usage (in an AI agent)
@@ -24,15 +33,52 @@ Lists feedback items for your project with optional filtering.
 The agent calls `list_feedbacks` with `status: "new"` and receives structured feedback including:
 
 - Feedback comment and page URL
+- Board column, tags (including `env`), assignee, and team comment count
 - DOM selector and click coordinates
 - React component tree and source file
 - Browser info and viewport size
 - Screenshot URL
 - Console logs and network requests captured before submission
 
+An unknown `column` returns an error listing the valid column names.
+
+## `list_columns`
+
+Lists the project's board columns in board order, with each column's status. A project can have several columns per status, such as "In Progress" and "In Test".
+
+### Parameters
+
+None.
+
+### Example usage (in an AI agent)
+
+> "Which columns does the board have?"
+
+The agent calls `list_columns` and receives each column's name, status, and ID.
+
+## `move_feedback`
+
+Moves a feedback item to a board column. The item takes the column's status. Prefer this over `update_feedback_status` when the project has several columns per status.
+
+### Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `feedback_id` | `string` (UUID) | Yes | The feedback ID to move |
+| `column` | `string` | Yes | Column name (case-insensitive) or ID, from `list_columns` |
+| `comment` | `string` | No | A note for the team, up to 5000 characters. Requires the `feedbacks:comment` scope |
+
+### Example usage (in an AI agent)
+
+> "Move this feedback to In Test and note what you changed"
+
+The agent calls `move_feedback` with the feedback ID, `column: "In Test"`, and a `comment` describing the fix. The comment appears in the team's thread with the move.
+
+Moving archived feedback to a column un-archives it. Moving to the current column changes nothing, but the comment is still saved. An unknown column returns an error listing the valid names.
+
 ## `update_feedback_status`
 
-Updates the status of a feedback item.
+Updates the status of a feedback item. The item lands in the first column of the new status; use `move_feedback` to target a specific column.
 
 ### Parameters
 
@@ -40,12 +86,48 @@ Updates the status of a feedback item.
 |-----------|------|----------|-------------|
 | `feedback_id` | `string` (UUID) | Yes | The feedback ID to update |
 | `status` | `string` | Yes | New status: `new`, `in_progress`, `resolved`, or `closed` |
+| `comment` | `string` | No | A closeout note for the team, up to 5000 characters. Requires the `feedbacks:comment` scope |
 
 ### Example usage (in an AI agent)
 
 > "Mark this feedback as resolved"
 
-The agent calls `update_feedback_status` with the feedback ID and `status: "resolved"`.
+The agent calls `update_feedback_status` with the feedback ID, `status: "resolved"`, and optionally a `comment` summarizing the fix.
+
+## `list_comments`
+
+Reads the team's comment thread on a feedback item, oldest first. Comments are written by team members and agents, never by the reviewer who reported the issue, and often hold context such as reproduction notes or earlier fix attempts.
+
+### Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `feedback_id` | `string` (UUID) | Yes | The feedback ID |
+
+### Example usage (in an AI agent)
+
+> "Check the team's notes on this feedback before fixing it"
+
+The agent calls `list_comments` with the feedback ID and receives each comment's author, timestamp, body, and any column move it was left with.
+
+## `add_comment`
+
+Adds a comment to a feedback item's team thread, such as findings or a question for the team. Comments are visible to the team in the dashboard, never to the reviewer. To comment while moving or resolving, pass `comment` to `move_feedback` or `update_feedback_status` instead.
+
+### Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `feedback_id` | `string` (UUID) | Yes | The feedback ID |
+| `body` | `string` | Yes | Comment text, 1–5000 characters |
+
+### Example usage (in an AI agent)
+
+> "Leave a note that this needs a design decision"
+
+The agent calls `add_comment` with the feedback ID and the note.
+
+Agent comments appear in the dashboard under the token's name with an **Agent** badge. They cannot be edited; owners and admins can delete them. This tool requires a token with the **Add comments** permission (`feedbacks:comment`).
 
 ## Feedback statuses
 
@@ -61,6 +143,10 @@ The agent calls `update_feedback_status` with the feedback ID and `status: "reso
 | Action | Limit |
 |--------|-------|
 | `list_feedbacks` | 200 requests/hour |
+| `list_columns` | 200 requests/hour |
+| `list_comments` | 200 requests/hour |
 | `update_feedback_status` | 50 requests/hour |
+| `move_feedback` | 50 requests/hour |
+| `add_comment` | 50 requests/hour |
 
-Rate limits are per agent token.
+Rate limits are per agent token. Read tools share the read limit and write tools share the write limit. A move or status change with a comment counts as one request.

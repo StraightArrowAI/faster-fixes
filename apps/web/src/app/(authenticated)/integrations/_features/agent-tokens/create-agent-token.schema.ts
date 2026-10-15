@@ -9,9 +9,10 @@ export const CreateAgentTokenSchema = z.object({
         "feedbacks:read",
         "feedbacks:update_status",
         "feedbacks:create",
+        "feedbacks:comment",
       ]),
     )
     .min(1, "Select at least one permission"),
 });
 
-export type CreateAgentTokenSchemaType = z.infer<typeof CreateAgentTokenSchema>;
+export type CreateAgentTokenInput = z.infer<typeof CreateAgentTokenSchema>;

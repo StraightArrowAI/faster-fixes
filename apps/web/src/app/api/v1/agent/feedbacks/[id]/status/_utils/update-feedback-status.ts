@@ -11,6 +11,16 @@ import {
   requireAgentAuth,
 } from "../../../../_utils/require-agent-auth";
 import { updateFeedbackStatuses } from "@/server/feedback/update-feedback-statuses";
+import {
+  boardColumnName,
+  resolveBoardColumn,
+} from "@/server/feedback/board-columns";
+import {
+  createAgentComment,
+  findAgentFeedback,
+  getProjectColumns,
+  requireCommentScope,
+} from "../../../../_utils/agent-feedback";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -44,23 +54,36 @@ export async function updateFeedbackStatus(
     return agentError("Validation failed", "VALIDATION_ERROR", 422);
   }
 
-  // Verify the feedback belongs to a project in the token's organization.
-  const orgProjectIds = agentToken.organization.projects.map((p) => p.id);
-  const feedback = await prisma.feedback.findFirst({
-    where: { id: idParsed.data, projectId: { in: orgProjectIds } },
-    select: { id: true, status: true },
-  });
+  const scopeError = requireCommentScope(agentToken, parsed.data.comment);
+  if (scopeError) return scopeError;
+
+  const feedback = await findAgentFeedback(agentToken, idParsed.data);
 
   if (!feedback) {
     return agentError("Feedback not found", "NOT_FOUND", 404);
   }
 
+  const columns = await getProjectColumns(feedback.projectId);
   const previousStatus = feedback.status;
   await updateFeedbackStatuses(prisma, { id: feedback.id }, parsed.data.status);
   const updated = await prisma.feedback.findUniqueOrThrow({
     where: { id: feedback.id },
-    select: { id: true, status: true, updatedAt: true },
+    select: { id: true, status: true, columnId: true, updatedAt: true },
   });
+
+  // A re-asserted status keeps its lane; record a move only when the card
+  // actually changed lanes.
+  const fromName = boardColumnName(columns, feedback);
+  const toName = boardColumnName(columns, updated);
+  const comment = parsed.data.comment
+    ? await createAgentComment(agentToken, {
+        feedbackId: feedback.id,
+        body: parsed.data.comment,
+        transition:
+          fromName === toName ? undefined : { from: fromName, to: toName },
+      })
+    : null;
+  const column = resolveBoardColumn(columns, updated);
 
   console.info(
     `[agent-api] feedbacks:update_status tokenId=${agentToken.id} feedbackId=${feedback.id} ${previousStatus} -> ${parsed.data.status}`,
@@ -86,6 +109,8 @@ export async function updateFeedbackStatus(
   return NextResponse.json({
     id: updated.id,
     status: updated.status,
+    column: column ? { id: column.id, name: column.name } : null,
     updatedAt: updated.updatedAt,
+    comment: comment ? { id: comment.id } : null,
   });
 }

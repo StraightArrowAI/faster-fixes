@@ -11,6 +11,15 @@ import {
   requireAgentAuth,
 } from "../../_utils/require-agent-auth";
 import { resolveProjectId } from "../../_utils/resolve-project-id";
+import { getProjectColumns } from "../../_utils/agent-feedback";
+import { parseFeedbackTags } from "@/app/(authenticated)/(project)/inbox/_features/parse-feedback-tags";
+import {
+  findColumnByReference,
+  resolveBoardColumn,
+} from "@/server/feedback/board-columns";
+
+// Agent-facing spelling of the board's "no environment" filter.
+const NO_ENVIRONMENT = "none";
 
 export async function listFeedbacks(req: NextRequest) {
   const auth = await requireAgentAuth(
@@ -27,17 +36,27 @@ export async function listFeedbacks(req: NextRequest) {
     page_url: searchParams.get("page_url") ?? undefined,
     project: searchParams.get("project") ?? undefined,
     format: searchParams.get("format") ?? undefined,
+    env: searchParams.get("env") ?? undefined,
+    column: searchParams.get("column") ?? undefined,
   });
 
   if (!parsed.success) {
     return agentError("Validation failed", "VALIDATION_ERROR", 422);
   }
 
-  const { status, page_url, project, format } = parsed.data;
+  const { status, page_url, project, format, env, column } = parsed.data;
 
   const projectId = resolveProjectId(project, agentToken.organization.projects);
   if (!projectId) {
     return agentError("Project not found", "NOT_FOUND", 404);
+  }
+
+  const columns = await getProjectColumns(projectId);
+  const columnFilter = column ? findColumnByReference(columns, column) : null;
+  if (column && !columnFilter) {
+    return agentError("Column not found", "COLUMN_NOT_FOUND", 404, {
+      extra: { columns: columns.map((c) => c.name) },
+    });
   }
 
   const feedbacks = await prisma.feedback.findMany({
@@ -49,6 +68,8 @@ export async function listFeedbacks(req: NextRequest) {
     orderBy: { createdAt: "desc" },
     include: {
       reviewer: { select: { name: true } },
+      assignee: { select: { user: { select: { name: true, email: true } } } },
+      _count: { select: { comments: true } },
       screenshot: { select: { key: true, provider: true, bucket: true } },
       recording: {
         select: { key: true, provider: true, bucket: true, metadata: true },
@@ -56,14 +77,34 @@ export async function listFeedbacks(req: NextRequest) {
     },
   });
 
+  // Column and env are derived (a null columnId means "first column of the
+  // category", tags are JSON), so they filter in memory rather than in SQL.
+  const withBoard = feedbacks
+    .map((f) => ({
+      f,
+      tags: parseFeedbackTags(f.tags),
+      column: resolveBoardColumn(columns, f),
+    }))
+    .filter(({ tags }) =>
+      !env ? true : env === NO_ENVIRONMENT ? !tags.env : tags.env === env,
+    )
+    .filter(({ column: c }) => !columnFilter || c?.id === columnFilter.id);
+
   console.info(
-    `[agent-api] feedbacks:list tokenId=${agentToken.id} project=${projectId} count=${feedbacks.length}`,
+    `[agent-api] feedbacks:list tokenId=${agentToken.id} project=${projectId} count=${withBoard.length}`,
   );
 
   const mapped = await Promise.all(
-    feedbacks.map(async (f) => ({
+    withBoard.map(async ({ f, tags, column: c }) => ({
       id: f.id,
       status: f.status,
+      // Archived feedback has no lane.
+      column: c && f.status !== "closed" ? { id: c.id, name: c.name } : null,
+      tags,
+      assignee: f.assignee
+        ? { name: f.assignee.user.name || f.assignee.user.email }
+        : null,
+      commentCount: f._count.comments,
       comment: f.comment,
       pageUrl: f.pageUrl,
       selector: f.selector,
@@ -87,10 +128,15 @@ export async function listFeedbacks(req: NextRequest) {
   );
 
   if (format === "markdown") {
-    return new NextResponse(formatFeedbackListAsMarkdown(mapped), {
-      status: 200,
-      headers: { "Content-Type": "text/markdown; charset=utf-8" },
-    });
+    return new NextResponse(
+      formatFeedbackListAsMarkdown(
+        mapped.map((m) => ({ ...m, columnName: m.column?.name ?? null })),
+      ),
+      {
+        status: 200,
+        headers: { "Content-Type": "text/markdown; charset=utf-8" },
+      },
+    );
   }
 
   return NextResponse.json({

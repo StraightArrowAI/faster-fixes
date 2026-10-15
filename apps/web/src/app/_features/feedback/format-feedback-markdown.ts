@@ -27,6 +27,10 @@ export type FeedbackForMarkdown = {
   // Optional: the dashboard's lean list query doesn't load it; the agent API and
   // issue creators do. Absent → the Diagnostics section is skipped.
   diagnosticTrail?: DiagnosticTrail | null;
+  // Optional board context; absent fields are simply not printed.
+  columnName?: string | null;
+  tags?: Record<string, string>;
+  commentCount?: number;
 };
 
 export function formatFeedbackAsMarkdown(f: FeedbackForMarkdown): string {
@@ -36,6 +40,14 @@ export function formatFeedbackAsMarkdown(f: FeedbackForMarkdown): string {
   lines.push(`# Feedback ${f.id}`);
   lines.push("");
   lines.push(`**Status:** ${f.status}`);
+  if (f.columnName) lines.push(`**Column:** ${f.columnName}`);
+  const tagEntries = Object.entries(f.tags ?? {});
+  if (tagEntries.length > 0) {
+    lines.push(
+      `**Tags:** ${tagEntries.map(([k, v]) => `${k}=${v}`).join(", ")}`,
+    );
+  }
+  if (f.commentCount) lines.push(`**Team comments:** ${f.commentCount}`);
   lines.push("");
   lines.push(
     "A user left feedback on your application. Review and address the issue described below.",
@@ -137,9 +149,7 @@ export function formatFeedbackListAsMarkdown(
   feedbacks: FeedbackForMarkdown[],
 ): string {
   if (feedbacks.length === 0) return "No feedback items found.";
-  return feedbacks
-    .map((f) => formatFeedbackAsMarkdown(f))
-    .join("\n\n---\n\n");
+  return feedbacks.map((f) => formatFeedbackAsMarkdown(f)).join("\n\n---\n\n");
 }
 
 /**

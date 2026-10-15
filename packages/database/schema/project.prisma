@@ -54,8 +54,8 @@ model Reviewer {
   projectId String
   project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
-  name     String
-  email    String?
+  name            String
+  email           String?
   // sha256 of the raw token, used to validate requests. The column keeps its
   // old name so previously deployed code reads the same data (ADR-0013).
   tokenLookup     String  @unique @map("token")
@@ -150,11 +150,16 @@ model FeedbackComment {
   updatedAt DateTime  @updatedAt
   editedAt  DateTime?
 
-  feedbackId String
-  feedback   Feedback @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
+  feedbackId   String
+  feedback     Feedback    @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
   // SetNull keeps the thread readable after a member leaves ("Former member").
-  authorId   String?
-  author     Member?  @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  authorId     String?
+  author       Member?     @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  // Agent API comments: authorId stays null. The token name is frozen so the
+  // thread still reads correctly after the token is deleted.
+  agentTokenId String?
+  agentToken   AgentToken? @relation(fields: [agentTokenId], references: [id], onDelete: SetNull)
+  agentName    String?
 
   body String
 
@@ -165,6 +170,7 @@ model FeedbackComment {
 
   @@index([feedbackId, createdAt])
   @@index([authorId])
+  @@index([agentTokenId])
   @@map("feedback_comment")
 }
 
